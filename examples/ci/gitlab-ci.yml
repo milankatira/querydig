@@ -1,0 +1,9 @@
+querydig:
+  image: node:22
+  stage: test
+  script:
+    - npx -y querydig --format md > querydig.md || true
+    - npx -y querydig --fail-on high
+  artifacts:
+    when: always
+    paths: [querydig.md]

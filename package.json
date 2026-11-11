@@ -1,0 +1,73 @@
+{
+  "name": "querydig",
+  "version": "0.1.0",
+  "description": "Find slow, N+1 and unoptimized database queries (MongoDB, Postgres, MySQL) in JS/TS, Python and Go code. Zero-config CLI for local runs and CI.",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/cli.js',0o755)\"",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "keywords": [
+    "mongodb",
+    "mongoose",
+    "sql",
+    "postgres",
+    "mysql",
+    "prisma",
+    "n+1",
+    "slow-query",
+    "query-optimization",
+    "performance",
+    "static-analysis",
+    "cli",
+    "npx",
+    "ci"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "commander": "^15.1.0",
+    "fast-glob": "^3.3.3",
+    "ignore": "^7.0.14",
+    "picocolors": "^1.1.1",
+    "web-tree-sitter": "0.22.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tree-sitter-wasms": "^0.1.13",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "5.9",
+    "vitest": "^5.1.0"
+  },
+  "bin": {
+    "querydig": "dist/cli.js"
+  },
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "grammars",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/milankatira/querydig.git"
+  },
+  "homepage": "https://github.com/milankatira/querydig#readme",
+  "bugs": {
+    "url": "https://github.com/milankatira/querydig/issues"
+  }
+}

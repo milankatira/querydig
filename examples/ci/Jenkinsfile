@@ -1,0 +1,12 @@
+pipeline {
+  agent { docker { image 'node:22' } }
+  stages {
+    stage('querydig') {
+      steps {
+        sh 'npx -y querydig --format html -o querydig-report.html || true'
+        sh 'npx -y querydig --baseline .querydig-baseline.json --fail-on high'
+      }
+      post { always { archiveArtifacts artifacts: 'querydig-report.html', allowEmptyArchive: true } }
+    }
+  }
+}
