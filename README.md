@@ -127,12 +127,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { contents: read, security-events: write }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22 }
       - run: npx -y querydig --format sarif -o querydig.sarif || true
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         with: { sarif_file: querydig.sarif }
       - run: npx -y querydig --diff origin/${{ github.base_ref }} --fail-on high
 ```
