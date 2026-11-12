@@ -392,17 +392,10 @@ html.dark .cta-panel { background: rgb(255 255 255 / .015); }
 .cta-panel .bg-glow { top: -14rem; }
 @media (min-width: 768px) { .cta-panel { padding: 96px 48px; } }
 
-/* ---------- Grade ladder ---------- */
-.ladder { margin-top: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px 6px 6px; border-radius: 999px; border: 1px solid var(--fg-8); background: var(--fg-3); }
-.ladder span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; font: 600 13px/1 var(--font-display); color: #fff; }
-.g-a { background: #059669; } .g-b { background: #65a30d; } .g-c { background: #d97706; } .g-d { background: #ea580c; } .g-f { background: #e11d48; }
-.ladder em { margin-left: 8px; font: italic 400 17px/1 var(--font-serif); color: var(--fg-55); }
-@media (max-width: 420px) { .ladder em { display: none; } .ladder { padding-right: 6px; } }
-
 /* ---------- Contrast band ---------- */
 .band { --bg: #000319; --fg: #ffffff; --surface: #050822; --pos: #34d399; --glow: rgba(255,255,255,.1); --grid-stroke: rgb(255 255 255 / .04);
   background: var(--bg); color: var(--fg); border-top: 0 !important; overflow: hidden; }
-html.dark .band { --bg: #f4f5fa; --fg: #0a0f24; --surface: #ffffff; --pos: #059669; --glow: rgba(0,3,25,.07); --grid-stroke: rgb(10 15 36 / .05); }
+html.dark .band { --bg: #060a2b; --surface: #0a0f36; border-top: 1px solid rgb(255 255 255 / .06) !important; border-bottom: 1px solid rgb(255 255 255 / .06); }
 .band .card { background: color-mix(in oklab, var(--fg) 3%, transparent); }
 .band + .section { border-top: 0; }
 .band::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, var(--grid-stroke) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-stroke) 1px, transparent 1px); background-size: 8px 8px; -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 70%); mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 70%); }
@@ -495,10 +488,6 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
         View on GitHub
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-    </div>
-    <div class="ladder reveal" style="--d:480ms" aria-label="Grades from A to F">
-      <span class="g-a">A</span><span class="g-b">B</span><span class="g-c">C</span><span class="g-d">D</span><span class="g-f">F</span>
-      <em>where does your repo land?</em>
     </div>
     <p class="hero-meta reveal" style="--d:540ms">No account · No config · No database connection needed</p>
 
