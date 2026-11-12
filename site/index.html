@@ -96,8 +96,10 @@ code, pre, kbd { font-family: var(--font-mono); }
 .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 16px; }
 @media (min-width: 640px) { .wrap { padding: 0 24px; } }
 section { position: relative; }
-.section { padding: 112px 0; }
-@media (max-width: 640px) { .section { padding: 80px 0; } }
+.section { padding: 64px 0; }
+@media (min-width: 900px) { .section { padding: 80px 0; } }
+.section + .section { border-top: 1px solid var(--fg-5); }
+.features { border-top: 0 !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- Primitives ---------- */
@@ -336,22 +338,59 @@ p code, li code, .lede code { font-size: .88em; padding: 1px 5px; border-radius:
 .faq code { font-size: .9em; padding: 2px 6px; border-radius: 6px; background: var(--fg-5); }
 
 /* ---------- Final CTA ---------- */
-.cta { overflow: hidden; text-align: center; }
-.cta .bg-glow { top: 6rem; }
+.cta { text-align: center; }
 .cta-box { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
 .cta .h2 { font-size: clamp(2.3rem, 6vw, 4.25rem); }
 
 /* ---------- Footer ---------- */
-footer { border-top: 1px solid var(--fg-8); padding: 56px 0 0; overflow: hidden; }
-.foot { display: grid; gap: 32px; }
-@media (min-width: 760px) { .foot { grid-template-columns: 1.4fr 1fr 1fr; } }
-.foot p { margin: 14px 0 0; max-width: 340px; color: var(--fg-45); font-size: 14.5px; }
-.foot h4 { margin: 0 0 14px; font: 500 11px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--fg-35); }
-.foot ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-.foot ul a { color: var(--fg-65); font-size: 14.5px; transition: color .3s; }
-.foot ul a:hover { color: var(--fg); }
-.foot-bottom { margin-top: 48px; padding: 20px 0; border-top: 1px solid var(--fg-8); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--fg-35); }
-.wordmark { font: 700 clamp(4rem, 19vw, 15rem)/0.8 var(--font-display); letter-spacing: -0.06em; text-align: center; margin: 8px 0 -0.12em; background: linear-gradient(to bottom, var(--fg-10), transparent 85%); -webkit-background-clip: text; background-clip: text; color: transparent; user-select: none; }
+footer { border-top: 1px solid var(--fg-8); padding: 88px 0 0; overflow: hidden; position: relative; }
+.foot { display: grid; gap: 48px 32px; grid-template-columns: repeat(2, 1fr); }
+.foot-brand { grid-column: 1 / -1; }
+@media (min-width: 900px) { .foot { grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 48px; } .foot-brand { grid-column: auto; padding-right: 32px; } }
+.foot-brand p { margin: 18px 0 0; max-width: 360px; color: var(--fg-45); font-size: 14.5px; line-height: 1.7; }
+.foot-cmd { margin-top: 24px; display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 6px 0 16px; border-radius: 999px; border: 1px solid var(--fg-10); background: var(--fg-3); color: var(--fg-80); font: 500 13px/1 var(--font-mono); cursor: pointer; transition: border-color .3s, background-color .3s; }
+.foot-cmd:hover { border-color: var(--fg-25); background: var(--fg-5); }
+.foot-cmd .dollar { color: var(--fg-35); }
+.foot-copy { margin-left: 4px; padding: 7px 10px; border-radius: 999px; background: var(--fg-5); font: 500 11px/1 var(--font-sans); color: var(--fg-55); }
+.foot-cmd.copied .foot-copy { background: var(--pos); color: #fff; }
+.socials { margin-top: 20px; display: flex; gap: 8px; }
+.foot-col h4 { margin: 4px 0 20px; font: 500 11px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--fg-35); }
+.foot-col ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.foot-col a { color: var(--fg-65); font-size: 14.5px; transition: color .3s; }
+.foot-col a:hover { color: var(--fg); }
+.foot-bottom { margin-top: 72px; padding: 28px 0; border-top: 1px solid var(--fg-8); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; font-size: 13px; color: var(--fg-35); }
+.foot-bottom a { color: var(--fg-65); transition: color .3s; } .foot-bottom a:hover { color: var(--fg); }
+.wordmark { padding: 8px 16px 0; font: 700 clamp(4.5rem, 21vw, 17rem)/1 var(--font-display); letter-spacing: -0.06em; text-align: center; white-space: nowrap; background: linear-gradient(to bottom, var(--fg-15), color-mix(in oklab, var(--fg) 2%, transparent) 80%); -webkit-background-clip: text; background-clip: text; color: transparent; user-select: none; margin: 0; padding-bottom: clamp(48px, 7vw, 96px); line-height: 1.1; }
+
+/* ---------- Before / after ---------- */
+.ba { margin-top: 56px; display: grid; gap: 16px; align-items: stretch; }
+@media (min-width: 980px) { .ba { grid-template-columns: 1fr 48px 1fr; } }
+.ba-pane { border-radius: 20px; background: var(--code-bg); color: var(--code-fg); border: 1px solid rgb(255 255 255 / .08); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
+.ba-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgb(255 255 255 / .06); }
+.ba-head .tag { border-color: rgb(255 255 255 / .12); }
+.ba-meta { font: 500 11.5px/1 var(--font-mono); color: rgb(255 255 255 / .45); }
+.ba-pane pre { margin: 0; padding: 20px; font: 12.5px/1.75 var(--font-mono); overflow-x: auto; flex: 1; }
+.ba-pane .k { color: #93c5fd; } .ba-pane .s { color: #86efac; } .ba-pane .c { color: rgb(255 255 255 / .38); }
+.ba-pane mark { background: rgb(251 113 133 / .16); color: inherit; border-radius: 4px; padding: 1px 3px; box-shadow: inset 2px 0 0 #fb7185; }
+.ba-arrow { display: grid; place-items: center; color: var(--fg-35); }
+.ba-arrow svg { width: 24px; height: 24px; }
+@media (max-width: 979px) { .ba-arrow svg { transform: rotate(90deg); } }
+.ba-stats { margin-top: 16px; display: grid; gap: 1px; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--fg-8); border-radius: 20px; overflow: hidden; background: var(--fg-8); }
+.ba-stats div { background: var(--bg); padding: 20px; }
+.ba-stats b { display: block; font: 600 26px/1 var(--font-display); letter-spacing: -0.02em; }
+.ba-stats span { display: block; margin-top: 8px; font-size: 13px; color: var(--fg-45); }
+@media (max-width: 640px) { .ba-stats { grid-template-columns: 1fr; } }
+
+/* ---------- FAQ layout ---------- */
+.faq-wrap { display: grid; gap: 40px; }
+@media (min-width: 960px) { .faq-wrap { grid-template-columns: 1fr 1.5fr; gap: 72px; align-items: start; } .faq-side { position: sticky; top: 120px; } }
+.faq-wrap .faq { margin: 0; max-width: none; }
+
+/* ---------- CTA panel ---------- */
+.cta-panel { position: relative; overflow: hidden; border: 1px solid var(--fg-10); border-radius: 32px; padding: 72px 24px; background: color-mix(in oklab, var(--surface) 60%, transparent); box-shadow: inset 0 1px 0 0 var(--fg-8); }
+html.dark .cta-panel { background: rgb(255 255 255 / .015); }
+.cta-panel .bg-glow { top: -14rem; }
+@media (min-width: 768px) { .cta-panel { padding: 96px 48px; } }
 
 /* ---------- Overflow guards (wide code must scroll, not stretch the page) ---------- */
 .grid > *, .split > *, .steps > *, .hero-inner > *, .head > * { min-width: 0; max-width: 100%; }
@@ -423,7 +462,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
       <span class="line reveal" style="--d:160ms"><span class="serif grad">slowing you down</span></span>
       <span class="line reveal" style="--d:240ms">before production does.</span>
     </h1>
-    <p class="hero-sub reveal" style="--d:320ms">querydig reads your code and flags <strong>N+1 queries, nested loops of queries, unbounded reads and index-hostile filters</strong> in MongoDB and SQL, ranked from critical to low, with a fix for every one.</p>
+    <p class="hero-sub reveal" style="--d:320ms">One command scans your codebase for <strong>N+1 queries, writes in loops, unbounded reads and index-hostile filters</strong> across MongoDB and SQL. Each one is ranked from critical to low and comes with the fix.</p>
     <div class="hero-cta reveal" style="--d:400ms" id="install">
       <button class="cmd" type="button" data-copy="npx querydig" aria-label="Copy command: npx querydig">
         <span><span class="dollar">$ </span>npx querydig</span>
@@ -538,8 +577,44 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
   </div>
 </section>
 
+
+<!-- ============ FIX ============ -->
+<section class="section" id="fix">
+  <div class="wrap">
+    <div class="head center">
+      <span class="eyebrow reveal">Every finding comes with a fix</span>
+      <h2 class="h2 reveal" style="--d:60ms">Not just <span class="serif">what</span> is slow. How to make it fast.</h2>
+      <p class="lede reveal" style="--d:120ms">querydig explains the cost in plain words and shows the rewrite. Here's the most common one it finds: a query per row.</p>
+    </div>
+    <div class="ba reveal" style="--d:160ms">
+      <div class="ba-pane">
+        <div class="ba-head"><span class="tag sev-critical"><span class="dot"></span>before</span><span class="ba-meta">1 + N queries · grows with data</span></div>
+<pre><span class="c">// 1 query for orders, then 1 per order</span>
+<span class="k">const</span> orders = <span class="k">await</span> Order.find({ status: <span class="s">'open'</span> });
+<span class="k">for</span> (<span class="k">const</span> o <span class="k">of</span> orders) {
+  <mark>o.user = <span class="k">await</span> User.findById(o.userId);</mark>
+}</pre>
+      </div>
+      <div class="ba-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="ba-pane">
+        <div class="ba-head"><span class="tag" style="color:var(--pos)"><span class="dot"></span>after</span><span class="ba-meta">2 queries · constant</span></div>
+<pre><span class="k">const</span> orders = <span class="k">await</span> Order.find({ status: <span class="s">'open'</span> }).lean();
+<span class="k">const</span> ids = orders.map((o) =&gt; o.userId);
+<span class="k">const</span> users = <span class="k">await</span> User.find({ _id: { $in: ids } }).lean();
+<span class="k">const</span> byId = <span class="k">new</span> Map(users.map((u) =&gt; [String(u._id), u]));
+<span class="k">for</span> (<span class="k">const</span> o <span class="k">of</span> orders) o.user = byId.get(String(o.userId));</pre>
+      </div>
+    </div>
+    <div class="ba-stats reveal" style="--d:220ms">
+      <div><b>1,001</b><span>queries for 1,000 orders, before</span></div>
+      <div><b>2</b><span>queries for 1,000 orders, after</span></div>
+      <div><b>Same</b><span>result, no schema change</span></div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ SEVERITY ============ -->
-<section class="section" id="severity" style="padding-top:24px">
+<section class="section" id="severity">
   <div class="wrap">
     <div class="head">
       <span class="eyebrow reveal">Severity</span>
@@ -579,7 +654,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 </section>
 
 <!-- ============ HOW IT WORKS ============ -->
-<section class="section" id="how" style="padding-top:24px">
+<section class="section" id="how">
   <div class="wrap">
     <div class="head center">
       <span class="eyebrow reveal">How it works</span>
@@ -596,7 +671,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 </section>
 
 <!-- ============ REPORTS ============ -->
-<section class="section" id="reports" style="padding-top:24px">
+<section class="section" id="reports">
   <div class="wrap split">
     <div class="head">
       <span class="eyebrow reveal">Reports</span>
@@ -644,7 +719,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 </section>
 
 <!-- ============ CI ============ -->
-<section class="section" id="ci" style="padding-top:24px">
+<section class="section" id="ci">
   <div class="wrap split">
     <div class="head">
       <span class="eyebrow reveal">CI / CD</span>
@@ -706,7 +781,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
 </section>
 
 <!-- ============ PRIVACY ============ -->
-<section class="section privacy" id="privacy" style="padding-top:24px">
+<section class="section privacy" id="privacy">
   <div class="wrap">
     <div class="head center">
       <span class="eyebrow reveal">Local-first</span>
@@ -722,7 +797,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
 </section>
 
 <!-- ============ RULES ============ -->
-<section class="section" id="rules" style="padding-top:24px">
+<section class="section" id="rules">
   <div class="wrap">
     <div class="head">
       <span class="eyebrow reveal">Rules</span>
@@ -743,14 +818,16 @@ npx -y querydig --format html -o querydig-report.html</pre>
 </section>
 
 <!-- ============ FAQ ============ -->
-<section class="section" id="faq" style="padding-top:24px">
-  <div class="wrap">
-    <div class="head center">
+<section class="section" id="faq">
+  <div class="wrap faq-wrap">
+    <div class="head faq-side">
       <span class="eyebrow reveal">FAQ</span>
       <h2 class="h2 reveal" style="--d:60ms">Questions, <span class="serif">answered</span>.</h2>
+      <p class="lede reveal" style="--d:120ms">Can't find what you need? Open an issue. Feature requests for new ORMs and languages are very welcome.</p>
+      <div class="reveal" style="--d:180ms;margin-top:24px"><a class="btn btn-outline btn-sm" href="https://github.com/milankatira/querydig/issues/new" target="_blank" rel="noopener">Ask a question</a></div>
     </div>
     <div class="faq reveal">
-      <details><summary>Does it need access to my database?</summary><p>No. querydig reads source code only. A read-only live mode that pulls profiler and <code>EXPLAIN</code> data is on the roadmap, and it will always be opt-in.</p></details>
+      <details open><summary>Does it need access to my database?</summary><p>No. querydig reads source code only. A read-only live mode that pulls profiler and <code>EXPLAIN</code> data is on the roadmap, and it will always be opt-in.</p></details>
       <details><summary>Which languages and libraries are supported?</summary><p>JavaScript and TypeScript (Mongoose, the MongoDB driver, Prisma, TypeORM, Sequelize, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) and Go (mongo-go-driver, GORM, xorm, <code>database/sql</code>). Raw SQL strings are checked in every language.</p></details>
       <details><summary>How noisy is it on a real codebase?</summary><p>Tests, specs, fixtures, migrations, seeds and benchmarks are skipped by default. Polling and batching loops, loops over collections, and array or string helpers aren't treated as queries. On Gitea (about 2,200 Go files) it reports 16 findings in under a second. To silence one, add <code>// querydig-ignore QD001</code>.</p></details>
       <details><summary>How do I add it to a project that already has hundreds of issues?</summary><p>Run <code>npx querydig --update-baseline</code> once and commit <code>.querydig-baseline.json</code>. Then run <code>--baseline .querydig-baseline.json --fail-on high</code> in CI, so only newly introduced issues fail the build.</p></details>
@@ -762,18 +839,23 @@ npx -y querydig --format html -o querydig-report.html</pre>
 
 <!-- ============ FINAL CTA ============ -->
 <section class="section cta">
-  <div class="bg-fx" aria-hidden="true"><div class="bg-grid" style="-webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 50%,#000 20%,transparent 70%);mask-image:radial-gradient(ellipse 80% 70% at 50% 50%,#000 20%,transparent 70%)"></div><div class="bg-glow"></div></div>
-  <div class="wrap cta-box">
-    <span class="eyebrow reveal">Thirty seconds</span>
-    <h2 class="h2 reveal" style="--d:60ms">Run your first scan <span class="serif">now</span>.</h2>
-    <p class="lede reveal" style="--d:120ms">Open a terminal in any repo. You'll have a ranked list of slow queries before your coffee cools.</p>
-    <div class="hero-cta reveal" style="--d:180ms">
+  <div class="wrap">
+  <div class="cta-panel reveal">
+  <div class="bg-fx" aria-hidden="true"><div class="bg-grid" style="-webkit-mask-image:radial-gradient(ellipse 70% 80% at 50% 0%,#000 25%,transparent 75%);mask-image:radial-gradient(ellipse 70% 80% at 50% 0%,#000 25%,transparent 75%)"></div><div class="bg-glow"></div></div>
+  <div class="cta-box">
+    <span class="eyebrow">Takes about thirty seconds</span>
+    <h2 class="h2">Run your first scan <span class="serif">now</span>.</h2>
+    <p class="lede">Open a terminal in any repo. You get a ranked list of slow queries, and an HTML report you can share with the team.</p>
+    <div class="hero-cta">
       <button class="cmd" type="button" data-copy="npx querydig --format html" aria-label="Copy command: npx querydig --format html">
         <span><span class="dollar">$ </span>npx querydig --format html</span>
         <span class="copy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
       </button>
       <a class="btn btn-outline" href="https://www.npmjs.com/package/querydig" target="_blank" rel="noopener">View on npm</a>
     </div>
+    <p class="hero-meta">Node.js 22.12+ · macOS, Linux, Windows</p>
+  </div>
+  </div>
   </div>
 </section>
 </main>
@@ -782,27 +864,34 @@ npx -y querydig --format html -o querydig-report.html</pre>
 <footer>
   <div class="wrap">
     <div class="foot">
-      <div>
+      <div class="foot-brand">
         <a href="#top" class="logo"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="10" cy="6" rx="6" ry="2.5"/><path d="M4 6v8c0 1.4 2.7 2.5 6 2.5"/><path d="M16 6v3.5"/><circle cx="17" cy="16" r="3.2"/><path d="m19.4 18.4 2.1 2.1"/></svg></span>querydig</a>
-        <p>Finds slow, N+1 and unoptimised database queries in your code before they reach production.</p>
+        <p>Finds slow, N+1 and unoptimised database queries in your code before they reach production. Free and open source.</p>
+        <button class="foot-cmd" type="button" data-copy="npx querydig" aria-label="Copy command: npx querydig"><span class="dollar">$</span> npx querydig<span class="foot-copy">copy</span></button>
+        <div class="socials">
+          <a class="icon-btn" href="https://github.com/milankatira/querydig" target="_blank" rel="noopener" aria-label="querydig on GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg></a>
+          <a class="icon-btn" href="https://www.npmjs.com/package/querydig" target="_blank" rel="noopener" aria-label="querydig on npm"><span style="font:700 10.5px/1 var(--font-mono);letter-spacing:-.02em">npm</span></a>
+        </div>
       </div>
-      <div>
+      <nav class="foot-col" aria-label="Product">
         <h4>Product</h4>
-        <ul><li><a href="#features">What it finds</a></li><li><a href="#rules">Rules</a></li><li><a href="#ci">CI setup</a></li><li><a href="#faq">FAQ</a></li></ul>
-      </div>
-      <div>
+        <ul><li><a href="#features">What it finds</a></li><li><a href="#fix">Fix examples</a></li><li><a href="#severity">Severity levels</a></li><li><a href="#rules">All rules</a></li></ul>
+      </nav>
+      <nav class="foot-col" aria-label="Guides">
+        <h4>Guides</h4>
+        <ul><li><a href="https://github.com/milankatira/querydig#usage" target="_blank" rel="noopener">Usage</a></li><li><a href="#ci">CI setup</a></li><li><a href="https://github.com/milankatira/querydig#configuration" target="_blank" rel="noopener">Configuration</a></li><li><a href="https://github.com/milankatira/querydig/tree/main/examples/ci" target="_blank" rel="noopener">Pipeline templates</a></li></ul>
+      </nav>
+      <nav class="foot-col" aria-label="Project">
         <h4>Project</h4>
-        <ul>
-          <li><a href="https://github.com/milankatira/querydig" target="_blank" rel="noopener">GitHub</a></li>
-          <li><a href="https://www.npmjs.com/package/querydig" target="_blank" rel="noopener">npm</a></li>
-          <li><a href="https://github.com/milankatira/querydig#readme" target="_blank" rel="noopener">Docs</a></li>
-          <li><a href="https://github.com/milankatira/querydig/issues" target="_blank" rel="noopener">Issues</a></li>
-        </ul>
-      </div>
+        <ul><li><a href="https://github.com/milankatira/querydig" target="_blank" rel="noopener">Source code</a></li><li><a href="https://www.npmjs.com/package/querydig" target="_blank" rel="noopener">npm package</a></li><li><a href="https://github.com/milankatira/querydig/issues" target="_blank" rel="noopener">Report an issue</a></li><li><a href="https://github.com/milankatira/querydig/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a></li></ul>
+      </nav>
     </div>
-    <div class="foot-bottom"><span>© 2026 querydig · MIT licensed</span><span>Built by <a href="https://github.com/milankatira" target="_blank" rel="noopener" style="color:var(--fg-65)">@milankatira</a></span></div>
-    <div class="wordmark" aria-hidden="true">querydig</div>
+    <div class="foot-bottom">
+      <span>© 2026 querydig. Released under the MIT license.</span>
+      <span>Built by <a href="https://github.com/milankatira" target="_blank" rel="noopener">@milankatira</a></span>
+    </div>
   </div>
+  <div class="wordmark" aria-hidden="true">querydig</div>
 </footer>
 
 <script>
