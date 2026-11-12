@@ -38,6 +38,12 @@ program
   .option('--limit <n>', 'max findings shown in terminal (0 = all)', '25')
   .option('--threads <n>', 'worker threads')
   .option('-v, --verbose', 'show confidence, fingerprints and parse errors', false)
+  .option('--uri <uri>', 'read-only connection to MongoDB or Postgres for live evidence (or set QUERYDIG_DB_URI)')
+  .option('--db <name>', 'MongoDB database name when the URI has none')
+  .option('--slow-ms <n>', 'slow-query threshold for profiler / pg_stat_statements', '100')
+  .option('--explain-execute', 'run explain with execution stats (executes queries; use a replica)', false)
+  .option('--max-explain <n>', 'maximum number of query shapes to explain', '200')
+  .option('--live-required', 'fail (exit 2) if the live database cannot be reached', false)
   .action(async (path: string, o) => {
     const root = resolve(path);
     if (!existsSync(root)) {
@@ -55,6 +61,10 @@ program
     const baseline = !updating && baselinePath ? readBaseline(baselinePath) : undefined;
     if (baselinePath && !updating && !baseline) console.error(pc.yellow(`querydig: baseline ${baselinePath} not found — reporting all findings`));
 
+    const uri: string | undefined = o.uri ?? process.env.QUERYDIG_DB_URI;
+    const live = uri
+      ? { uri, db: o.db, slowMs: Number(o.slowMs) || 100, explainExecute: !!o.explainExecute, maxExplain: Number(o.maxExplain) || 200, timeoutMs: 5000 }
+      : undefined;
     const interactive = o.format === 'terminal' && process.stderr.isTTY;
     let last = 0;
     const summary = await scan({
@@ -67,6 +77,8 @@ program
       diff: o.diff,
       baseline,
       threads: o.threads ? Number(o.threads) : undefined,
+      live,
+      onLiveStart: live && process.stderr.isTTY ? () => process.stderr.write(pc.dim('\rconnecting to the database for live evidence…') + '\r') : undefined,
       onProgress: interactive
         ? (d, t) => {
             const now = Date.now();
@@ -77,6 +89,12 @@ program
           }
         : undefined,
     });
+
+    if (live && process.stderr.isTTY) process.stderr.write('\x1b[K');
+    if (summary.live?.error) {
+      console.error(pc.yellow(`querydig: live mode skipped: ${summary.live.error}`));
+      if (o.liveRequired) process.exit(2);
+    }
 
     if (updating) {
       const file = resolve(typeof o.updateBaseline === 'string' ? o.updateBaseline : baselinePath ?? '.querydig-baseline.json');

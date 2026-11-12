@@ -4,7 +4,7 @@ import type { ScanSummary } from '../types.js';
 export function renderHtml(s: ScanSummary): string {
   const used = new Set(s.findings.map((f) => f.ruleId));
   const data = {
-    summary: { root: s.root, files: s.filesScanned, ms: s.durationMs, grade: s.grade, score: s.score, bySeverity: s.bySeverity, baseline: s.suppressedByBaseline, version: s.version, generated: new Date().toISOString() },
+    summary: { root: s.root, files: s.filesScanned, ms: s.durationMs, grade: s.grade, score: s.score, bySeverity: s.bySeverity, baseline: s.suppressedByBaseline, version: s.version, generated: new Date().toISOString(), live: s.live ?? null },
     findings: s.findings,
     rules: RULES.filter((r) => used.has(r.id)),
   };
@@ -46,6 +46,8 @@ h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
 .loc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);margin:4px 0 8px;word-break:break-all}
 pre{background:var(--code);border-radius:8px;padding:10px 12px;overflow-x:auto;margin:8px 0;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
 .fix{color:var(--ok)}
+.ev{margin-top:6px;padding:6px 10px;border-radius:8px;background:color-mix(in oklab,#a855f7 12%,transparent);color:var(--ink);font-size:13px}
+.ev b{color:#a855f7;font-weight:600;margin-right:6px}
 .tag{background:var(--chip);border-radius:6px;padding:1px 7px;font-size:11px;color:var(--muted)}
 details{margin-top:6px}summary{cursor:pointer;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:48px 0}
@@ -72,7 +74,7 @@ const D=${json};
 const SEV=['critical','high','medium','low','info'];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const S=D.summary, on=new Set(['critical','high','medium','low','info']);
-document.getElementById('sub').textContent=S.root+' · '+S.files+' files · '+(S.ms/1000).toFixed(2)+'s'+(S.baseline?' · '+S.baseline+' hidden by baseline':'');
+document.getElementById('sub').textContent=S.root+' · '+S.files+' files · '+(S.ms/1000).toFixed(2)+'s'+(S.baseline?' · '+S.baseline+' hidden by baseline':'')+(S.live&&!S.live.error?' · live: '+S.live.adapter+' '+S.live.database+', '+S.live.explained+' query plans':'');
 const gc={A:'var(--ok)',B:'var(--ok)',C:'var(--med)',D:'var(--high)',F:'var(--crit)'}[S.grade];
 document.getElementById('cards').innerHTML='<div class="card grade"><div class="k">Health</div><div class="v" style="color:'+gc+'">'+S.grade+' <small style="font-size:14px;color:var(--muted)">'+S.score+'/100</small></div></div>'+
  ['critical','high','medium','low'].map(k=>'<div class="card"><div class="k">'+k+'</div><div class="v c-'+k+'">'+S.bySeverity[k]+'</div></div>').join('');
@@ -90,7 +92,7 @@ function render(){
  const L=document.getElementById('list');
  if(!fs.length){L.innerHTML='<div class="empty">'+(D.findings.length?'No findings match the filters.':'✔ No query performance issues found.')+'</div>';return}
  L.innerHTML=fs.slice(0,1000).map(f=>{const r=RM[f.ruleId]||{};return '<div class="f '+f.severity+'"><h3><span class="sev c-'+f.severity+'">'+f.severity+'</span><span class="rid">'+f.ruleId+'</span>'+esc(f.title)+' <span class="tag">'+f.db+'</span><span class="tag">'+f.confidence+' confidence</span></h3>'+
-  '<div class="loc">'+esc(f.file)+':'+f.line+':'+f.column+'</div><pre>'+esc(f.snippet)+'</pre><div>'+esc(f.message)+'</div><div class="fix"><b>Fix:</b> '+esc(f.fix)+'</div>'+
+  '<div class="loc">'+esc(f.file)+(f.line>0?':'+f.line+':'+f.column:'')+'</div><pre>'+esc(f.snippet)+'</pre><div>'+esc(f.message)+'</div>'+(f.evidence?'<div class="ev"><b>live</b>'+esc(f.evidence.note)+(f.evidence.severityChange?' ('+f.evidence.severityChange.from+' → '+f.evidence.severityChange.to+')':'')+'</div>':'')+'<div class="fix"><b>Fix:</b> '+esc(f.fix)+'</div>'+
   (r.why?'<details><summary>Why is this slow?</summary><p>'+esc(r.why)+'</p>'+(r.example?'<div>Before</div><pre>'+esc(r.example.bad)+'</pre><div>After</div><pre>'+esc(r.example.good)+'</pre>':'')+'</details>':'')+'</div>'}).join('')+(fs.length>1000?'<div class="empty">Showing first 1000 of '+fs.length+'</div>':'');
 }
 ['q','db'].forEach(id=>document.getElementById(id).addEventListener('input',render));rsel.addEventListener('input',render);

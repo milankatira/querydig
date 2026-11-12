@@ -31,14 +31,14 @@ export function renderSarif(s: ScanSummary): string {
           })),
         },
       },
-      results: s.findings.map((f) => ({
+      results: s.findings.filter((f) => f.line > 0 && !f.file.startsWith('db://')).map((f) => ({
         ruleId: f.ruleId,
         ruleIndex: rules.findIndex((r) => r.id === f.ruleId),
         level: SARIF_LEVEL[f.severity],
         message: { text: `${f.message} Fix: ${f.fix}` },
         locations: [{ physicalLocation: { artifactLocation: { uri: f.file }, region: { startLine: f.line, startColumn: f.column } } }],
         partialFingerprints: { querydig: f.fingerprint },
-        properties: { severity: f.severity, db: f.db, confidence: f.confidence },
+        properties: { severity: f.severity, db: f.db, confidence: f.confidence, ...(f.evidence ? { evidence: f.evidence } : {}) },
       })),
     }],
   };
@@ -51,7 +51,7 @@ export function renderMarkdown(s: ScanSummary, limit = 50): string {
   const o: string[] = [];
   o.push(`## querydig — query performance report`);
   o.push('');
-  o.push(`**Health: ${s.grade} (${s.score}/100)** · ${s.filesScanned} files · ${s.findings.length} issue(s)` + (s.suppressedByBaseline ? ` · ${s.suppressedByBaseline} hidden by baseline` : ''));
+  o.push(`**Health: ${s.grade} (${s.score}/100)** · ${s.filesScanned} files · ${s.findings.length} issue(s)` + (s.suppressedByBaseline ? ` · ${s.suppressedByBaseline} hidden by baseline` : '') + (s.live && !s.live.error ? ` · live: ${s.live.adapter} \`${s.live.database}\`, ${s.live.explained} plans` : ''));
   o.push('');
   o.push('| Severity | Count |');
   o.push('|---|---|');
@@ -64,7 +64,9 @@ export function renderMarkdown(s: ScanSummary, limit = 50): string {
   o.push('| | Rule | Location | Issue |');
   o.push('|---|---|---|---|');
   for (const f of s.findings.slice(0, limit)) {
-    o.push(`| ${EMOJI[f.severity]} | \`${f.ruleId}\` ${RULE_MAP.get(f.ruleId)?.name ?? ''} | \`${f.file}:${f.line}\` | ${f.message.replace(/\|/g, '\\|')} |`);
+    const loc = f.line > 0 ? `${f.file}:${f.line}` : f.file;
+    const ev = f.evidence ? `<br>🔎 ${f.evidence.note}${f.evidence.severityChange ? ` (${f.evidence.severityChange.from} → ${f.evidence.severityChange.to})` : ''}` : '';
+    o.push(`| ${EMOJI[f.severity]} | \`${f.ruleId}\` ${RULE_MAP.get(f.ruleId)?.name ?? ''} | \`${loc}\` | ${(f.message + ev).replace(/\|/g, '\\|')} |`);
   }
   if (s.findings.length > limit) o.push(`\n…and ${s.findings.length - limit} more.`);
   o.push('');

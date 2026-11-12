@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { LANGS, type LangSpec } from './languages.js';
 import { getParser, type TSNode } from './parser.js';
 import { RULE_MAP } from './rules.js';
-import type { Confidence, Db, Finding, LangId, Severity } from './types.js';
+import type { Confidence, Db, Finding, LangId, QueryShape, Severity, SortKey } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Operation catalogue
@@ -183,6 +183,7 @@ interface QueryCall {
   argsText: string;
   chain: ChainLink[];
   confidence: Confidence;
+  shapeId?: string;
 }
 interface Ctx { depth: number; over: boolean; loopLine?: number; overVar?: string; loopVars?: string[]; iterName?: string }
 
@@ -193,20 +194,42 @@ const same = (a: TSNode | null | undefined, b: TSNode | null | undefined) =>
 
 const stripQuotes = (s: string) => s.replace(/^[rRbBuUfF]{0,2}(['"`]{1,3})([\s\S]*?)\1$/, '$2');
 
-export async function analyzeSource(source: string, opts: AnalyzeOptions): Promise<Finding[]> {
-  if (/querydig-ignore-file/.test(source.slice(0, 2000))) return [];
+export interface AnalyzeResult { findings: Finding[]; shapes: QueryShape[] }
+
+export async function analyzeSourceFull(source: string, opts: AnalyzeOptions): Promise<AnalyzeResult> {
+  if (/querydig-ignore-file/.test(source.slice(0, 2000))) return { findings: [], shapes: [] };
   const parser = await getParser(opts.lang);
   const tree = parser.parse(source);
   try {
-    return new Analyzer(source, opts, LANGS[opts.lang]).run(tree.rootNode);
+    const a = new Analyzer(source, opts, LANGS[opts.lang]);
+    const findings = a.run(tree.rootNode);
+    return { findings, shapes: a.shapes };
   } finally {
     tree.delete();
   }
 }
 
+export async function analyzeSource(source: string, opts: AnalyzeOptions): Promise<Finding[]> {
+  return (await analyzeSourceFull(source, opts)).findings;
+}
+
+/** Table name and WHERE / ORDER BY columns from a SQL string (best effort). */
+export function sqlShape(sql: string): { table?: string; filterKeys: string[]; sortKeys: SortKey[]; hasLimit: boolean } {
+  const unq = (x: string) => x.replace(/["`\[\]]/g, '').split('.').pop()!;
+  const table = /\b(?:from|update|into)\s+([\w."`\[\]]+)/i.exec(sql)?.[1];
+  const where = /\bwhere\b([\s\S]*?)(\border\s+by\b|\bgroup\s+by\b|\blimit\b|\boffset\b|\breturning\b|$)/i.exec(sql)?.[1] ?? '';
+  const filterKeys = [...where.matchAll(/([\w."`]+)\s*(?:=|<>|!=|<=|>=|<|>|\bin\b|\blike\b|\bilike\b|\bis\b|\bbetween\b)/gi)]
+    .map((m) => unq(m[1])).filter((k) => !/^(and|or|not|\d+)$/i.test(k));
+  const order = /\border\s+by\s+([\s\S]*?)(\blimit\b|\boffset\b|$)/i.exec(sql)?.[1] ?? '';
+  const sortKeys: SortKey[] = order.split(',').map((p) => p.trim()).filter((p) => /^[\w."`]+/.test(p) && !/\(/.test(p))
+    .map((p) => ({ key: unq(p.split(/\s+/)[0]), dir: /\bdesc\b/i.test(p) ? -1 : 1 }) as SortKey);
+  return { table: table ? unq(table) : undefined, filterKeys: [...new Set(filterKeys)], sortKeys, hasLimit: /\blimit\b|\bfetch\s+first\b/i.test(sql) };
+}
+
 class Analyzer {
   private lines: string[];
   private findings: Finding[] = [];
+  shapes: QueryShape[] = [];
   private queryVars = new Set<string>();
   private hasMongo: boolean;
   private hasSql: boolean;
@@ -530,6 +553,7 @@ class Analyzer {
 
   private evaluate(q: QueryCall, ctx: Ctx): void {
     this.trackAssignment(q);
+    this.recordShape(q, ctx);
     const target = q.collection ? `${q.collection}.${q.method}` : `${q.receiver}.${q.method}`;
     const loopInfo = ctx.loopLine ? ` (loop at line ${ctx.loopLine})` : '';
 
@@ -561,6 +585,76 @@ class Analyzer {
 
     if (q.db === 'mongodb') this.mongoRules(q);
     if (q.db === 'sql') this.sqlOrmRules(q);
+  }
+
+  private recordShape(q: QueryCall, ctx: Ctx): void {
+    const id = `${this.opts.relPath}:${q.node.startPosition.row + 1}:${q.node.startPosition.column + 1}`;
+    q.shapeId = id;
+    let filterKeys = this.shapeFilterKeys(q);
+    let sortKeys = this.sortKeys(q);
+    let collection = q.collection;
+    let sql: string | undefined;
+    if (q.kind === 'raw' && q.args[0] && this.spec.strings.includes(q.args[0].type)) {
+      sql = stripQuotes(q.args[0].text.replace(/\$\{[^}]*\}/g, '?')).replace(/\s+/g, ' ').trim();
+      const sh = sqlShape(sql);
+      collection = sh.table;
+      filterKeys = sh.filterKeys;
+      sortKeys = sh.sortKeys;
+    }
+    const hasLimit = q.kind === 'read' || this.chainHas(q, /^(limit|Limit|take|first|First|one|get|Take|Last)$/)
+      || /\b(limit|take|SetLimit|first)\b/.test(q.argsText) || (!!sql && /\blimit\b/i.test(sql));
+    this.shapes.push({
+      id, db: q.db, orm: q.orm, collection, method: q.method, kind: q.kind, filterKeys, sortKeys, hasLimit,
+      inLoop: ctx.depth > 0, sql, file: this.opts.relPath, line: q.node.startPosition.row + 1,
+    });
+  }
+
+  private shapeFilterKeys(q: QueryCall): string[] {
+    const clean = (k: string) => k.split('__')[0];
+    // Prisma: { where: { ... } }
+    if (q.orm === 'prisma' && q.args[0]?.type === 'object') {
+      const where = q.args[0].namedChildren.find((c) => c.type === 'pair' && c.childForFieldName('key')?.text === 'where');
+      const v = where?.childForFieldName('value');
+      return v ? this.objectKeys(v) : [];
+    }
+    // Django / SQLAlchemy filter_by: keyword arguments, including chained filter() calls
+    if (this.spec.id === 'python' && (q.orm === 'django' || q.orm === 'sqlalchemy')) {
+      const txt = [q.argsText, ...q.chain.filter((c) => /^(filter|filter_by|get|exclude)$/.test(c.name)).map((c) => c.args)].join(' ');
+      return [...new Set([...txt.matchAll(/(?:^|[(,\s])([a-z_][\w]*)\s*=(?!=)/gi)].map((m) => clean(m[1])))];
+    }
+    // GORM / xorm: Where("a = ? AND b > ?")
+    if (q.orm === 'gorm' || this.spec.id === 'go') {
+      const w = q.chain.filter((c) => /^(Where|And|Or)$/.test(c.name)).map((c) => c.args).join(' ');
+      if (w) return sqlShape('select 1 from t where ' + stripQuotes(w.replace(/^\(|\)$/g, '').split(',')[0].trim())).filterKeys;
+    }
+    if (/^(findById|findByIdAndUpdate|findByIdAndDelete|findByIdAndRemove|findByPk|UpdateByID|findUnique)$/.test(q.method) && !this.filterKeys(q).length) return q.db === 'mongodb' ? ['_id'] : ['id'];
+    return this.filterKeys(q);
+  }
+
+  /** Sort keys from .sort({ a: -1 }), .sort("a", -1), sort=[("a", -1)], SetSort(bson.D{{"a", -1}}), order_by("-a"). */
+  private sortKeys(q: QueryCall): SortKey[] {
+    const out: SortKey[] = [];
+    const dirOf = (v?: string): 1 | -1 => (v && /^(-1|['"]?desc(ending)?['"]?|pymongo\.DESCENDING|DESCENDING)$/i.test(v.trim()) ? -1 : 1);
+    const links = q.chain.filter((c) => /^(sort|Sort|order_by|orderBy|Order)$/.test(c.name)).map((c) => c.args);
+    const fromArgs = /\bSetSort\(([^)]*\))|\bsort\s*=\s*(\[[^\]]*\])/.exec(q.argsText);
+    if (fromArgs) links.push(fromArgs[1] ?? fromArgs[2]);
+    const prismaOrder = /orderBy\s*:\s*(\{[^}]*\}|\[[^\]]*\])/.exec(q.argsText);
+    if (prismaOrder) links.push(prismaOrder[1]);
+    for (const txt of links) {
+      const obj = /\{([^{}]*)\}/.exec(txt);
+      if (obj && /:/.test(obj[1])) {
+        for (const part of obj[1].split(',')) {
+          const [k, v] = part.split(':').map((x) => x.trim().replace(/['"]/g, ''));
+          if (k && /^[\w.]+$/.test(k)) out.push({ key: k, dir: dirOf(v) });
+        }
+        continue;
+      }
+      for (const m of txt.matchAll(/["'](-?)([\w.]+)["']\s*(?:,\s*(-?1|pymongo\.\w+|[A-Z]+))?/g)) {
+        out.push({ key: m[2], dir: m[1] === '-' ? -1 : dirOf(m[3]) });
+      }
+    }
+    const seen = new Set<string>();
+    return out.filter((k) => !seen.has(k.key) && seen.add(k.key));
   }
 
   /** `collections.map(c => c.deleteMany({}))` hits a different collection each time: not N+1. */
@@ -852,6 +946,12 @@ class Analyzer {
     if (/^(delete)\b/i.test(txt) && !/\bfrom\b/i.test(txt)) return;
     if (/^insert\b/i.test(txt) && !/\binto\b/i.test(txt)) return;
     const pseudo: QueryCall = { node, top: node, method: 'sql', kind: 'raw', db: 'sql', receiver: 'sql', receiverText: '', args: [], argsText: txt, chain: [], confidence: 'high' };
+    if (!dynamic) {
+      const sh = sqlShape(txt);
+      const id = `${this.opts.relPath}:${node.startPosition.row + 1}:${node.startPosition.column + 1}:sql`;
+      pseudo.shapeId = id;
+      this.shapes.push({ id, db: 'sql', collection: sh.table, method: 'sql', kind: /^select|^with/i.test(txt) ? 'readMany' : 'write', filterKeys: sh.filterKeys, sortKeys: sh.sortKeys, hasLimit: sh.hasLimit, inLoop: false, sql: txt, file: this.opts.relPath, line: node.startPosition.row + 1 });
+    }
     const concatenated = !!node.parent && ['binary_expression', 'concatenated_string', 'binary_operator'].includes(node.parent.type);
 
     if (/^select\s+(\w+\.)?\*\s+from/i.test(txt)) this.add('SQ002', node, pseudo, { message: `\`${txt.slice(0, 60)}\` selects every column.` });
@@ -899,6 +999,7 @@ class Analyzer {
       fix: o.fix ?? rule.fix,
       confidence: o.confidence ?? q.confidence,
       fingerprint,
+      ...(q.shapeId ? { shapeId: q.shapeId } : {}),
     });
   }
 

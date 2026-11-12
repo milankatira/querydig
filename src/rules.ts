@@ -143,6 +143,33 @@ export const RULES: RuleMeta[] = [
     why: 'NOT IN with a subquery is often executed as a nested loop and has surprising NULL semantics.',
     fix: 'Rewrite as NOT EXISTS or a LEFT JOIN ... WHERE x IS NULL.',
   }),
+
+  // ---------- live database (--uri) ----------
+  r({
+    id: 'LV001', name: 'full-scan', title: 'Query does a full collection / table scan', severity: 'high', db: 'any',
+    why: 'The live query plan shows COLLSCAN / Seq Scan: every document or row is read to answer this query. Cost grows linearly with the table and competes with every other query for I/O and cache.',
+    fix: 'Create an index that matches the filter (equality fields first), then the sort fields, then range fields.',
+  }),
+  r({
+    id: 'LV002', name: 'in-memory-sort', title: 'Query sorts in memory', severity: 'medium', db: 'any',
+    why: 'The plan contains a blocking SORT stage: all matching rows are buffered and sorted before the first one is returned.',
+    fix: 'Add the sort fields to an index after the equality fields, in the same order and direction as the sort.',
+  }),
+  r({
+    id: 'LV003', name: 'slow-query', title: 'Slow query recorded by the database', severity: 'high', db: 'any',
+    why: 'The database profiler / pg_stat_statements recorded this query shape above the slow threshold in real traffic.',
+    fix: 'Check its plan with explain(), add a matching index, or reduce the documents/rows it has to read.',
+  }),
+  r({
+    id: 'LV004', name: 'unused-index', title: 'Index is never used', severity: 'low', db: 'any',
+    why: 'The index has zero recorded uses since statistics were last reset, but every write still has to update it and it takes RAM.',
+    fix: 'Confirm across all replicas and a full business cycle, then drop it.',
+  }),
+  r({
+    id: 'LV005', name: 'missing-fk-index', title: 'Foreign key column has no index', severity: 'medium', db: 'sql',
+    why: 'Queries that filter or join on this foreign key, and deletes on the parent table, have to scan the whole child table.',
+    fix: 'CREATE INDEX CONCURRENTLY on the foreign key column.',
+  }),
 ];
 
 export const RULE_MAP = new Map(RULES.map((x) => [x.id, x]));

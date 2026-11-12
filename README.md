@@ -12,6 +12,7 @@ npx querydig            # scan the current directory
 - **Fast.** Tree-sitter (WASM) parsing in a worker pool: about 2,000 files in under 1 second.
 - **Multi-language.** JavaScript, TypeScript, Python and Go.
 - **Multi-database.** MongoDB (Mongoose, native driver, PyMongo/Motor, mongo-go-driver) and SQL (Prisma, TypeORM, Sequelize, pg/mysql2/knex raw, Django ORM, SQLAlchemy, DB-API cursors, GORM/xorm, `database/sql`).
+- **Live evidence (optional).** Point `--uri` at a MongoDB or Postgres replica to confirm full scans, missing and unused indexes, and slow queries.
 - **CI-ready.** `--fail-on`, baselines, `--diff`, SARIF for GitHub code scanning, Markdown for PR comments, HTML report.
 
 > Requires Node.js 22.12+.
@@ -91,6 +92,70 @@ npm i -D querydig
 
 Built-in noise control: `while`/`for {}` polling loops, batching loops (`skip`/`offset` in the loop), loops over collections or model classes, and array helpers like `arr.find(x => …)` or Python `str.find()` are not flagged.
 
+## Live mode: evidence from your database
+
+Static analysis finds the patterns. Live mode connects **read-only** to MongoDB or Postgres and checks them against reality: how big each collection is, which indexes exist, and what the query planner actually does.
+
+```bash
+npx querydig --uri "mongodb://reader:***@replica-host/shop"
+QUERYDIG_DB_URI="postgres://reader:***@replica-host/shop" npx querydig   # keeps the secret out of shell history
+```
+
+What changes:
+
+- **Promotes** an N+1 whose inner query is a full scan of a large table to critical ("N × full scan of 4.2M docs") and adds the missing index.
+- **Demotes** unbounded reads on tiny lookup tables to low.
+- **Adds live-only findings:**
+
+| ID | Severity | Finds |
+|---|---|---|
+| LV001 | high / critical | Queries in your code that do a COLLSCAN / Seq Scan on 10k+ rows, with the exact index to create |
+| LV002 | medium | Queries that sort in memory |
+| LV003 | high / critical | Slow queries from the MongoDB profiler or `pg_stat_statements`, traced back to the line of code when possible |
+| LV004 | low | Indexes that are never used |
+| LV005 | medium | Postgres foreign keys without an index that your code filters on |
+
+Every live finding shows its evidence:
+
+```text
+ CRITICAL  QD002 Nested query over another query's results (N² risk) [mongodb]
+  src/reports.ts:15:25
+  live: Each iteration does a full scan of orders (300k docs): N × 300k docs read. (high → critical)
+  fix: … Until then, at least add an index: db.orders.createIndex({ userId: 1 })
+```
+
+**Safety model**
+
+- Only metadata and query plans are read by default: collection stats, index lists, `explain('queryPlanner')`, and `EXPLAIN (GENERIC_PLAN)` (PostgreSQL 16+). Queries are **planned, never executed**.
+- `--explain-execute` opts into execution stats (`executionStats` / `EXPLAIN ANALYZE`, SELECTs only), which do run the query. Use it on a replica.
+- Postgres: every statement runs in a read-only transaction (`default_transaction_read_only = on`) with a 5s statement timeout. MongoDB: `secondaryPreferred` reads with `maxTimeMS: 5000`.
+- Passwords are redacted from all output. If the database can't be reached, querydig warns and still reports static findings (`--live-required` makes that an error).
+
+**Recommended read-only users**
+
+```js
+// MongoDB
+db.createUser({ user: 'querydig', pwd: '…', roles: [{ role: 'read', db: 'shop' }, { role: 'clusterMonitor', db: 'admin' }] })
+```
+
+```sql
+-- Postgres
+CREATE ROLE querydig LOGIN PASSWORD '…';
+GRANT pg_read_all_stats TO querydig;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO querydig;
+```
+
+Slow-query detection needs the MongoDB profiler (`db.setProfilingLevel(1, { slowms: 100 })`) or the `pg_stat_statements` extension. querydig tells you when either is missing.
+
+| Option | Default | |
+|---|---|---|
+| `--uri <uri>` / `QUERYDIG_DB_URI` | | `mongodb://`, `mongodb+srv://`, `postgres://`, `postgresql://` |
+| `--db <name>` | from URI | MongoDB database when the URI has none |
+| `--slow-ms <n>` | 100 | Slow-query threshold |
+| `--explain-execute` | off | Execute explain (replicas only) |
+| `--max-explain <n>` | 200 | Cap on query shapes explained |
+| `--live-required` | off | Exit 2 if the database can't be reached |
+
 ## Suppressing findings
 
 ```ts
@@ -165,7 +230,8 @@ console.log(summary.bySeverity, summary.grade);
 
 ## Roadmap
 
-- **Live mode** (`--uri`, read-only): MongoDB profiler + `explain()` (COLLSCAN, docs-examined ratio, in-memory SORT), missing/unused indexes; Postgres `pg_stat_statements` + `EXPLAIN`; MySQL `performance_schema`. Live evidence will be merged with static findings to promote severity.
+- Live mode for MySQL (`performance_schema` + `EXPLAIN`).
+- Repo-wide index recommendations and PR comments.
 - Java/Kotlin (Hibernate/Spring Data), Ruby (ActiveRecord), PHP (Eloquent).
 - An official GitHub Action and incremental cache.
 

@@ -11,6 +11,8 @@ import { analyzeFile } from './fileAnalyzer.js';
 import { SUPPORTED_EXTENSIONS } from './languages.js';
 import { SEVERITIES, SEVERITY_RANK, type FileResult, type Finding, type ScanSummary, type Severity } from './types.js';
 import { VERSION } from './version.js';
+import type { LiveOptions } from './live/types.js';
+import type { LiveSummary, QueryShape } from './types.js';
 
 export interface ScanOptions extends QuerydigConfig {
   root: string;
@@ -19,6 +21,9 @@ export interface ScanOptions extends QuerydigConfig {
   baseline?: Set<string> | Map<string, number>;
   threads?: number;
   onProgress?: (done: number, total: number) => void;
+  /** connect to a live database for evidence (--uri) */
+  live?: LiveOptions;
+  onLiveStart?: () => void;
 }
 
 export async function listFiles(opts: ScanOptions): Promise<string[]> {
@@ -114,11 +119,22 @@ export async function scan(opts: ScanOptions): Promise<ScanSummary> {
   const results = await runPool(root, files, threads, opts.onProgress);
 
   let findings: Finding[] = [];
+  const shapes: QueryShape[] = [];
   const errors: { file: string; error: string }[] = [];
   for (const r of results) {
     if (!r) continue;
     if (r.error) errors.push({ file: r.file, error: r.error });
     findings.push(...r.findings);
+    if (r.shapes) shapes.push(...r.shapes);
+  }
+
+  let live: LiveSummary | undefined;
+  if (opts.live) {
+    opts.onLiveStart?.();
+    const { runLive } = await import('./live/index.js');
+    const res = await runLive(findings, shapes, opts.live);
+    findings = res.findings;
+    live = res.summary;
   }
 
   // rule overrides
@@ -159,6 +175,6 @@ export async function scan(opts: ScanOptions): Promise<ScanSummary> {
   const { grade, score } = gradeFor(findings, files.length);
   return {
     root, filesScanned: files.length, durationMs: Date.now() - started, findings, bySeverity, byRule, grade, score,
-    suppressedByBaseline, errors, version: VERSION,
+    suppressedByBaseline, errors, version: VERSION, ...(live ? { live } : {}),
   };
 }

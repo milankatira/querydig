@@ -11,6 +11,6 @@ export default defineConfig({
   clean: true,
   splitting: true,
   sourcemap: false,
-  external: ['web-tree-sitter'],
+  external: ['web-tree-sitter', 'mongodb', 'pg'],
   define: { __QUERYDIG_VERSION__: JSON.stringify(version) },
 });

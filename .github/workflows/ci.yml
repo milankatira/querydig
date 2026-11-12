@@ -17,3 +17,20 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: node dist/cli.js examples/sample-app --limit 3
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: docker compose -f docker-compose.test.yml up -d --wait
+      - name: Seed test databases
+        run: |
+          docker compose -f docker-compose.test.yml cp tests/live/seed/mongo.js mongo:/seed.js
+          docker compose -f docker-compose.test.yml exec -T mongo mongosh --quiet /seed.js
+          docker compose -f docker-compose.test.yml exec -T postgres psql -q -U postgres -d shop < tests/live/seed/postgres.sql
+      - run: npx vitest run tests/live
+        env:
+          QUERYDIG_IT: '1'

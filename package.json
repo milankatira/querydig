@@ -1,7 +1,7 @@
 {
   "name": "querydig",
-  "version": "0.1.1",
-  "description": "Find slow, N+1 and unoptimized database queries (MongoDB, Postgres, MySQL) in JS/TS, Python and Go code. Zero-config CLI for local runs and CI.",
+  "version": "0.2.0",
+  "description": "Find slow, N+1 and unoptimized database queries (MongoDB, Postgres, MySQL) in JS/TS, Python and Go code, with optional read-only live evidence from your database. Zero-config CLI for local runs and CI.",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/cli.js',0o755)\"",
@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "tree-sitter-wasms": "^0.1.13",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",
@@ -69,5 +70,9 @@
   "homepage": "https://milankatira.github.io/querydig/",
   "bugs": {
     "url": "https://github.com/milankatira/querydig/issues"
+  },
+  "optionalDependencies": {
+    "mongodb": "^7.8.0",
+    "pg": "^8.23.1"
   }
 }

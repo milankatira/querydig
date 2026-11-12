@@ -1,0 +1,21 @@
+# Test databases for querydig live mode: docker compose -f docker-compose.test.yml up -d
+services:
+  mongo:
+    image: mongo:8.2
+    command: ["mongod", "--profile", "1", "--slowms", "50"]
+    ports: ["27018:27017"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 2s
+      retries: 30
+  postgres:
+    image: postgres:17
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all"]
+    environment:
+      POSTGRES_PASSWORD: querydig
+      POSTGRES_DB: shop
+    ports: ["54329:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 30

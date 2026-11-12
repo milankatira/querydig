@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { analyzeSource } from './analyzer.js';
+import { analyzeSourceFull } from './analyzer.js';
 import { langForFile } from './languages.js';
 import type { FileResult } from './types.js';
 
@@ -13,8 +13,8 @@ export async function analyzeFile(root: string, rel: string): Promise<FileResult
   try {
     const src = await readFile(join(root, rel), 'utf8');
     if (src.length > MAX_BYTES || !QUICK_FILTER.test(src)) return { file: rel, findings: [] };
-    const findings = await analyzeSource(src, { relPath: rel, lang });
-    return { file: rel, findings };
+    const { findings, shapes } = await analyzeSourceFull(src, { relPath: rel, lang });
+    return { file: rel, findings, shapes };
   } catch (e) {
     return { file: rel, findings: [], error: (e as Error).message };
   }

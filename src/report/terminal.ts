@@ -17,6 +17,10 @@ export function renderTerminal(s: ScanSummary, opts: { limit?: number; verbose?:
   out.push('');
   out.push(pc.bold(`querydig ${pc.dim('v' + s.version)}  —  slow-query scan of ${s.root}`));
   out.push(pc.dim(`${s.filesScanned} files in ${(s.durationMs / 1000).toFixed(2)}s`));
+  if (s.live && !s.live.error) {
+    out.push(pc.dim(`live: ${s.live.adapter} ${s.live.database} · ${s.live.tables} ${s.live.adapter === 'mongodb' ? 'collections' : 'tables'} · ${s.live.explained} query plans · ${s.live.slowQueries} slow queries`));
+  }
+  for (const w of s.live?.warnings ?? []) out.push(pc.yellow(`  ! ${w}`));
   out.push('');
 
   if (!s.findings.length) {
@@ -53,9 +57,13 @@ function renderFinding(f: Finding, verbose?: boolean): string {
   const lines: string[] = [];
   const db = f.db === 'unknown' ? '' : pc.dim(` [${f.db}]`);
   lines.push(`${SEV_COLOR[f.severity](` ${f.severity.toUpperCase()} `)} ${pc.bold(f.ruleId)} ${f.title}${db}`);
-  lines.push(`  ${pc.underline(`${f.file}:${f.line}:${f.column}`)}`);
+  lines.push(`  ${pc.underline(f.line > 0 ? `${f.file}:${f.line}:${f.column}` : f.file)}`);
   for (const l of f.snippet.split('\n').slice(0, 3)) lines.push(pc.dim('  │ ') + l);
   lines.push(`  ${f.message}`);
+  if (f.evidence) {
+    const sc = f.evidence.severityChange ? ` ${pc.bold(`(${f.evidence.severityChange.from} → ${f.evidence.severityChange.to})`)}` : '';
+    lines.push(`  ${pc.magenta('live:')} ${f.evidence.note}${sc}`);
+  }
   lines.push(`  ${pc.green('fix:')} ${f.fix}`);
   if (verbose) lines.push(pc.dim(`  confidence: ${f.confidence}  fingerprint: ${f.fingerprint}`));
   lines.push('');

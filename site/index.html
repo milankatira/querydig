@@ -222,7 +222,7 @@ h1.hero-title .line { display: block; }
 .t-crit { background: #fb7185; color: #1b0610; font-weight: 700; padding: 0 4px; border-radius: 3px; }
 .t-high { color: #fb923c; font-weight: 700; } .t-med { color: #fbbf24; } .t-low { color: #7dd3fc; }
 .t-fix { color: #34d399; } .t-u { text-decoration: underline; text-decoration-color: rgb(255 255 255 / .3); text-underline-offset: 3px; }
-.t-prompt { color: #34d399; }
+.t-prompt { color: #34d399; } .t-live { color: #c084fc; }
 .caret { display: inline-block; width: 8px; height: 15px; vertical-align: -2px; background: rgb(255 255 255 / .75); animation: blink 1.1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
@@ -483,7 +483,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
     <p class="hero-meta reveal" style="--d:540ms">No account · No config · No database connection needed</p>
 
     <div class="stats reveal" style="--d:560ms">
-      <div class="stat"><b>22</b><span>performance rules</span></div>
+      <div class="stat"><b>27</b><span>performance rules</span></div>
       <div class="stat"><b>4</b><span>languages: JS, TS, Python, Go</span></div>
       <div class="stat"><b>&lt;1s</b><span>for 2,200+ files</span></div>
       <div class="stat"><b>0</b><span>lines of code uploaded</span></div>
@@ -492,16 +492,18 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
     <div class="terminal-wrap reveal" style="--d:120ms">
       <div class="terminal" role="img" aria-label="Example querydig terminal output showing a critical nested query and a medium sort-without-limit finding">
         <div class="term-bar"><i></i><i></i><i></i><span>~/api — zsh</span></div>
-<pre class="term-body"><span class="t-prompt">❯</span> npx querydig
+<pre class="term-body"><span class="t-prompt">❯</span> npx querydig --uri $REPLICA_URI
 
-<span class="t-b">querydig</span> <span class="t-dim">v0.1.1 — slow-query scan of ~/api</span>
+<span class="t-b">querydig</span> <span class="t-dim">v0.2.0 — slow-query scan of ~/api</span>
 <span class="t-dim">412 files in 0.31s</span>
+<span class="t-dim">live: mongodb shop · 18 collections · 64 query plans · 3 slow queries</span>
 
-<span class="t-crit"> CRITICAL </span> <span class="t-b">QD002</span> Nested query over another query's results (N² risk) <span class="t-dim">[mongodb]</span>
+<span class="t-crit"> CRITICAL </span> <span class="t-b">QD001</span> Query inside a loop (N+1) <span class="t-dim">[mongodb]</span>
   <span class="t-u">src/orders/orders.service.ts:42:20</span>
-<span class="t-dim">  │</span> o.user = await User.findById(o.userId);
-  `User.findById()` runs for every row of `orders`, which came from the database.
-  <span class="t-fix">fix:</span> Collect the ids and run one User.find({ _id: { $in: ids } }), then join with a Map.
+<span class="t-dim">  │</span> const items = await Order.find({ userId: u._id });
+  `Order.find()` is called inside a loop (line 41), one round-trip per user.
+  <span class="t-live">live:</span> Each iteration does a full scan of orders (4.2M docs). <span class="t-b">(high → critical)</span>
+  <span class="t-fix">fix:</span> One Order.find({ userId: { $in: ids } }); until then db.orders.createIndex({ userId: 1 }).
 
 <span class="t-med"> MEDIUM </span> <span class="t-b">MQ005</span> sort() without limit() <span class="t-dim">[mongodb]</span>
   <span class="t-u">src/search/search.ts:18:10</span>
@@ -770,11 +772,11 @@ npx -y querydig --format html -o querydig-report.html</pre>
     <div class="head center">
       <span class="eyebrow reveal">Local-first</span>
       <h2 class="h2 reveal" style="--d:60ms">Your code never <span class="serif">leaves</span> your machine.</h2>
-      <p class="lede reveal" style="--d:120ms">querydig is a static analyser that runs locally. It makes no network calls, and you don't need database credentials to scan.</p>
+      <p class="lede reveal" style="--d:120ms">querydig is a static analyser that runs locally. It makes no network calls of its own, and database access is strictly opt-in.</p>
     </div>
     <div class="grid g3">
       <article class="card reveal"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Nothing uploaded</h3><p>No telemetry, no account, no API key. It works the same on a plane as in CI.</p></article>
-      <article class="card reveal" style="--d:60ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="m2 2 20 20"/></svg></div><h3>No database access</h3><p>Findings come from your source code, so there's nothing to connect to and nothing it could change.</p></article>
+      <article class="card reveal" style="--d:60ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="m2 2 20 20"/></svg></div><h3>Database optional, read-only</h3><p>Findings come from your source code. Point <code>--uri</code> at a replica for live evidence: plans and stats only, in read-only sessions, with passwords redacted.</p></article>
       <article class="card reveal" style="--d:120ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></div><h3>Fully open source</h3><p>MIT licensed. Every rule is plain TypeScript you can read, change or switch off.</p></article>
     </div>
   </div>
@@ -785,8 +787,8 @@ npx -y querydig --format html -o querydig-report.html</pre>
   <div class="wrap">
     <div class="head">
       <span class="eyebrow reveal">Rules</span>
-      <h2 class="h2 reveal" style="--d:60ms">22 rules, each with a <span class="serif">why</span> and a fix.</h2>
-      <p class="lede reveal" style="--d:120ms">Run <code>npx querydig explain &lt;RULE&gt;</code> for a before/after example. Change a rule's severity or switch it off in <code>querydig.config.json</code>.</p>
+      <h2 class="h2 reveal" style="--d:60ms">27 rules, each with a <span class="serif">why</span> and a fix.</h2>
+      <p class="lede reveal" style="--d:120ms">Live rules (LV) need <code>--uri</code>. Run <code>npx querydig explain &lt;RULE&gt;</code> for a before/after example. Change a rule's severity or switch it off in <code>querydig.config.json</code>.</p>
     </div>
     <div class="rules-toolbar reveal">
       <div class="filter" role="group" aria-label="Filter rules by database">
@@ -794,6 +796,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
         <button type="button" aria-pressed="false" data-db="any">Any database</button>
         <button type="button" aria-pressed="false" data-db="mongodb">MongoDB</button>
         <button type="button" aria-pressed="false" data-db="sql">SQL</button>
+        <button type="button" aria-pressed="false" data-db="live">Live</button>
       </div>
       <span class="rules-count" id="rulesCount"></span>
     </div>
@@ -811,7 +814,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
       <div class="reveal" style="--d:180ms;margin-top:24px"><a class="btn btn-outline btn-sm" href="https://github.com/milankatira/querydig/issues/new" target="_blank" rel="noopener">Ask a question</a></div>
     </div>
     <div class="faq reveal">
-      <details open><summary>Does it need access to my database?</summary><p>No. querydig reads source code only. A read-only live mode that pulls profiler and <code>EXPLAIN</code> data is on the roadmap, and it will always be opt-in.</p></details>
+      <details open><summary>Does it need access to my database?</summary><p>No. By default querydig reads source code only. If you want proof, add <code>--uri</code> with a read-only MongoDB or Postgres connection. It then reads collection sizes, indexes, query plans and slow-query stats to confirm full scans and missing indexes. Queries are planned, never executed, unless you pass <code>--explain-execute</code>.</p></details>
       <details><summary>Which languages and libraries are supported?</summary><p>JavaScript and TypeScript (Mongoose, the MongoDB driver, Prisma, TypeORM, Sequelize, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) and Go (mongo-go-driver, GORM, xorm, <code>database/sql</code>). Raw SQL strings are checked in every language.</p></details>
       <details><summary>How noisy is it on a real codebase?</summary><p>Tests, specs, fixtures, migrations, seeds and benchmarks are skipped by default. Polling and batching loops, loops over collections, and array or string helpers aren't treated as queries. On Gitea (about 2,200 Go files) it reports 16 findings in under a second. To silence one, add <code>// querydig-ignore QD001</code>.</p></details>
       <details><summary>How do I add it to a project that already has hundreds of issues?</summary><p>Run <code>npx querydig --update-baseline</code> once and commit <code>.querydig-baseline.json</code>. Then run <code>--baseline .querydig-baseline.json --fail-on high</code> in CI, so only newly introduced issues fail the build.</p></details>
@@ -957,9 +960,14 @@ npx -y querydig --format html -o querydig-report.html</pre>
     ['SQ005', 'OFFSET pagination', 'Reads and discards every skipped row.', 'medium', 'sql'],
     ['SQ006', 'Function on a column in WHERE', 'LOWER(col) = ? is non-sargable.', 'medium', 'sql'],
     ['SQ007', 'ORDER BY RAND()', 'Sorts the whole table to pick a few rows.', 'high', 'sql'],
-    ['SQ008', 'NOT IN (subquery)', 'Often a nested loop; prefer NOT EXISTS.', 'medium', 'sql']
+    ['SQ008', 'NOT IN (subquery)', 'Often a nested loop; prefer NOT EXISTS.', 'medium', 'sql'],
+    ['LV001', 'Full collection / table scan', 'Live plan shows COLLSCAN / Seq Scan on 10k+ rows; gives the exact index.', 'high', 'live'],
+    ['LV002', 'In-memory sort', 'Live plan has a blocking SORT stage.', 'medium', 'live'],
+    ['LV003', 'Slow query in production', 'From the MongoDB profiler or pg_stat_statements, traced to the code line.', 'high', 'live'],
+    ['LV004', 'Unused index', 'Never used, but every write still pays for it.', 'low', 'live'],
+    ['LV005', 'Foreign key without index', 'Postgres FK your code filters on, with no index.', 'medium', 'live']
   ];
-  var DBL = { any: 'any db', mongodb: 'mongodb', sql: 'sql' };
+  var DBL = { any: 'any db', mongodb: 'mongodb', sql: 'sql', live: 'live --uri' };
   var list = document.getElementById('rulesList'), count = document.getElementById('rulesCount');
   function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
   function renderRules(db) {
