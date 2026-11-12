@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>querydig — find slow database queries before production does</title>
+<title>querydig: what's your query health grade?</title>
 <meta name="description" content="Zero-config CLI that finds N+1, nested, unbounded and index-hostile MongoDB and SQL queries in JS/TS, Python and Go code. Runs locally and in CI. npx querydig.">
 <meta property="og:title" content="querydig — find slow database queries before production does">
 <meta property="og:description" content="N+1 queries, unbounded reads, unanchored regexes, OFFSET pagination and more. 22 rules, 4 languages, one command: npx querydig.">
@@ -66,7 +66,7 @@ html.dark {
   --shadow: 0 30px 80px -40px rgb(0 0 0 / 0.9);
   color-scheme: dark;
 }
-:root {
+:root, .band {
   --fg-3: color-mix(in oklab, var(--fg) 3%, transparent);
   --fg-5: color-mix(in oklab, var(--fg) 5%, transparent);
   --fg-8: color-mix(in oklab, var(--fg) 8%, transparent);
@@ -392,6 +392,29 @@ html.dark .cta-panel { background: rgb(255 255 255 / .015); }
 .cta-panel .bg-glow { top: -14rem; }
 @media (min-width: 768px) { .cta-panel { padding: 96px 48px; } }
 
+/* ---------- Grade ladder ---------- */
+.ladder { margin-top: 28px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px 6px 6px; border-radius: 999px; border: 1px solid var(--fg-8); background: var(--fg-3); }
+.ladder span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; font: 600 13px/1 var(--font-display); color: #fff; }
+.g-a { background: #059669; } .g-b { background: #65a30d; } .g-c { background: #d97706; } .g-d { background: #ea580c; } .g-f { background: #e11d48; }
+.ladder em { margin-left: 8px; font: italic 400 17px/1 var(--font-serif); color: var(--fg-55); }
+@media (max-width: 420px) { .ladder em { display: none; } .ladder { padding-right: 6px; } }
+
+/* ---------- Contrast band ---------- */
+.band { --bg: #000319; --fg: #ffffff; --surface: #050822; --pos: #34d399; --glow: rgba(255,255,255,.1); --grid-stroke: rgb(255 255 255 / .04);
+  background: var(--bg); color: var(--fg); border-top: 0 !important; overflow: hidden; }
+html.dark .band { --bg: #f4f5fa; --fg: #0a0f24; --surface: #ffffff; --pos: #059669; --glow: rgba(0,3,25,.07); --grid-stroke: rgb(10 15 36 / .05); }
+.band .card { background: color-mix(in oklab, var(--fg) 3%, transparent); }
+.band + .section { border-top: 0; }
+.band::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, var(--grid-stroke) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-stroke) 1px, transparent 1px); background-size: 8px 8px; -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 70%); mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 70%); }
+.band .wrap { position: relative; }
+
+/* ---------- Report screenshot ---------- */
+.shot { margin: 0; border-radius: 20px; border: 1px solid var(--fg-10); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+.shot img { width: 100%; height: auto; }
+.shot .shot-light { display: none; } html:not(.dark) .shot .shot-light { display: block; } html:not(.dark) .shot .shot-dark { display: none; }
+.shot figcaption { padding: 12px 16px; border-top: 1px solid var(--fg-8); font-size: 13px; color: var(--fg-45); }
+.shot figcaption a { color: var(--fg-80); text-decoration: underline; text-decoration-color: var(--fg-25); text-underline-offset: 3px; }
+
 /* ---------- Overflow guards (wide code must scroll, not stretch the page) ---------- */
 .grid > *, .split > *, .steps > *, .hero-inner > *, .head > * { min-width: 0; max-width: 100%; }
 .terminal-wrap, .terminal, .code, .report, .feature-code, .r-find pre { max-width: 100%; }
@@ -458,11 +481,11 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
   <div class="wrap hero-inner">
     <span class="pill reveal"><span class="ping" aria-hidden="true"></span>Open source · MIT · runs on your machine</span>
     <h1 class="hero-title">
-      <span class="line reveal" style="--d:80ms">Find the queries</span>
-      <span class="line reveal" style="--d:160ms"><span class="serif grad">slowing you down</span></span>
-      <span class="line reveal" style="--d:240ms">before production does.</span>
+      <span class="line reveal" style="--d:80ms">What's your</span>
+      <span class="line reveal" style="--d:160ms"><span class="serif grad">query health</span></span>
+      <span class="line reveal" style="--d:240ms">grade?</span>
     </h1>
-    <p class="hero-sub reveal" style="--d:320ms">One command scans your codebase for <strong>N+1 queries, writes in loops, unbounded reads and index-hostile filters</strong> across MongoDB and SQL. Each one is ranked from critical to low and comes with the fix.</p>
+    <p class="hero-sub reveal" style="--d:320ms">One command grades your codebase from A to F and lists every <strong>N+1 query, write in a loop, unbounded read and index-hostile filter</strong> in your MongoDB and SQL code, ranked from critical to low, with the fix.</p>
     <div class="hero-cta reveal" style="--d:400ms" id="install">
       <button class="cmd" type="button" data-copy="npx querydig" aria-label="Copy command: npx querydig">
         <span><span class="dollar">$ </span>npx querydig</span>
@@ -473,7 +496,11 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
     </div>
-    <p class="hero-meta reveal" style="--d:480ms">No account · No config · No database connection needed</p>
+    <div class="ladder reveal" style="--d:480ms" aria-label="Grades from A to F">
+      <span class="g-a">A</span><span class="g-b">B</span><span class="g-c">C</span><span class="g-d">D</span><span class="g-f">F</span>
+      <em>where does your repo land?</em>
+    </div>
+    <p class="hero-meta reveal" style="--d:540ms">No account · No config · No database connection needed</p>
 
     <div class="stats reveal" style="--d:560ms">
       <div class="stat"><b>22</b><span>performance rules</span></div>
@@ -676,7 +703,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
     <div class="head">
       <span class="eyebrow reveal">Reports</span>
       <h2 class="h2 reveal" style="--d:60ms">A report your team will <span class="serif">actually</span> open.</h2>
-      <p class="lede reveal" style="--d:120ms">One self-contained HTML file to share or attach to a ticket, with filters by severity, rule, database and file. There's a before/after example on every finding.</p>
+      <p class="lede reveal" style="--d:120ms">Add <code>--format html</code> and you get one self-contained file to share or attach to a ticket. It has filters by severity, rule, database and file, and a before/after example on every finding.</p>
       <ul class="checks reveal" style="--d:180ms">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Exact location</b>: file, line and the code itself.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Why it's slow</b>, in plain words, for reviewers who aren't DB experts.</span></li>
@@ -686,35 +713,12 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
         <span class="tag">terminal</span><span class="tag">html</span><span class="tag">sarif</span><span class="tag">markdown</span><span class="tag">json</span>
       </div>
     </div>
-    <div class="report reveal" style="--d:120ms" role="img" aria-label="Preview of the querydig HTML report">
+    <figure class="shot reveal" style="--d:120ms">
       <div class="report-top"><i></i><i></i><i></i><span>querydig-report.html</span></div>
-      <div class="report-body">
-        <div class="r-tiles">
-          <div><small>Health</small><b style="color:var(--warn)">C</b></div>
-          <div><small>Critical</small><b class="sev-critical">2</b></div>
-          <div><small>High</small><b class="sev-high">7</b></div>
-          <div><small>Medium</small><b class="sev-medium">5</b></div>
-          <div><small>Low</small><b class="sev-low">9</b></div>
-        </div>
-        <div class="r-bar"><span style="width:9%;background:var(--neg)"></span><span style="width:30%;background:var(--high)"></span><span style="width:22%;background:var(--warn)"></span><span style="width:39%;background:var(--low)"></span></div>
-        <div class="r-find">
-          <div class="row"><em class="sev-critical">critical</em>QD002 Nested query over results</div>
-          <div class="loc">src/reports/monthly.ts:57:24</div>
-          <pre>const items = await Order.find({ userId: u._id })</pre>
-          <div class="fix">Fix: one Order.find({ userId: { $in: ids } })</div>
-        </div>
-        <div class="r-find h">
-          <div class="row"><em class="sev-high">high</em>SQ003 LIKE with leading wildcard</div>
-          <div class="loc">app/search/views.py:31:9</div>
-          <pre>cursor.execute("… WHERE name LIKE '%phone%'")</pre>
-          <div class="fix">Fix: prefix match or a trigram index</div>
-        </div>
-        <div class="r-find m">
-          <div class="row"><em class="sev-medium">medium</em>MQ006 $lookup before $match</div>
-          <div class="loc">internal/stats/repo.go:88:2</div>
-        </div>
-      </div>
-    </div>
+      <img class="shot-dark" src="assets/report-dark.png" width="1180" height="860" loading="lazy" alt="The querydig HTML report: health grade F, 6 critical, 16 high, 7 medium and 12 low findings, with filters and a list of nested-query findings">
+      <img class="shot-light" src="assets/report-light.png" width="1180" height="860" loading="lazy" alt="The querydig HTML report in light mode">
+      <figcaption>The actual report for the <a href="https://github.com/milankatira/querydig/tree/main/examples/sample-app" target="_blank" rel="noopener">sample app</a> in the repo.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -781,7 +785,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
 </section>
 
 <!-- ============ PRIVACY ============ -->
-<section class="section privacy" id="privacy">
+<section class="section privacy band" id="privacy">
   <div class="wrap">
     <div class="head center">
       <span class="eyebrow reveal">Local-first</span>
