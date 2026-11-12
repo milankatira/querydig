@@ -86,7 +86,7 @@ describe.skipIf(!IT)('live: Postgres', () => {
 
 describe.skipIf(!IT)('live: CLI', () => {
   it('prints evidence lines', () => {
-    const out = execFileSync('npx', ['tsx', 'src/cli.ts', root, '--uri', MONGO, '--limit', '0'], { encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname });
+    const out = execFileSync('npx', ['tsx', 'src/cli.ts', root, '--uri', MONGO, '--limit', '0'], { encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname, env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', CI: '' } });
     expect(out).toContain('live: mongodb shop');
     expect(out).toMatch(/live: .*COLLSCAN/);
   }, 60_000);
