@@ -54,6 +54,8 @@ npx querydig --baseline .querydig-baseline.json --fail-on high   # only NEW issu
 npx querydig rules                          # list rules
 npx querydig explain QD001                  # why + before/after example
 npx querydig init                           # create querydig.config.json
+npx querydig --fix                          # apply safe automatic fixes (.lean())
+npx querydig --uri … --emit-indexes         # write missing indexes to a script
 ```
 
 Add it to a project:
@@ -155,6 +157,29 @@ Slow-query detection needs the MongoDB profiler (`db.setProfilingLevel(1, { slow
 | `--explain-execute` | off | Execute explain (replicas only) |
 | `--max-explain <n>` | 200 | Cap on query shapes explained |
 | `--live-required` | off | Exit 2 if the database can't be reached |
+
+## Auto-fix and index scripts
+
+**`--fix`** applies only edits that are safe to make mechanically, and shows each change:
+
+```bash
+npx querydig --fix --dry-run   # preview
+npx querydig --fix             # write the changes, then review with git diff
+```
+
+Today that means adding `.lean()` to read-only Mongoose queries (MQ011), placed before `.exec()` / `.then()`. Files that call `.save()`, `.toObject()`, `.markModified()` and similar on documents are skipped. querydig never rewrites N+1 loops, adds limits or changes projections on its own, because those change behaviour. Each of those findings comes with a fix to apply by hand, or with an AI assistant.
+
+**`--emit-indexes [file]`** (with `--uri`) writes every missing index found in the query plans to one reviewed script. Indexes are de-duplicated, and an index that's a prefix of another is folded into it:
+
+```bash
+npx querydig --uri "$QUERYDIG_DB_URI" --emit-indexes          # querydig-indexes.js (MongoDB) or .sql (Postgres)
+mongosh "$QUERYDIG_DB_URI" querydig-indexes.js                # after review, on a replica first
+```
+
+```js
+// orders: fixes LV001 src/orders.ts:5, LV003 src/orders.ts:5, QD002 src/report.ts:15
+db.orders.createIndex({ status: 1, createdAt: -1 });
+```
 
 ## Suppressing findings
 

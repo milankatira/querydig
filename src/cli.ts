@@ -9,6 +9,8 @@ import { renderJson, renderMarkdown, renderSarif } from './report/formats.js';
 import { renderHtml } from './report/html.js';
 import { renderTerminal } from './report/terminal.js';
 import { RULES, findRule } from './rules.js';
+import { applyFixes } from './fix.js';
+import { planIndexes, renderIndexScript } from './indexes.js';
 import { scan } from './scan.js';
 import { SEVERITIES, SEVERITY_RANK, type Severity } from './types.js';
 import { VERSION } from './version.js';
@@ -44,6 +46,9 @@ program
   .option('--explain-execute', 'run explain with execution stats (executes queries; use a replica)', false)
   .option('--max-explain <n>', 'maximum number of query shapes to explain', '200')
   .option('--live-required', 'fail (exit 2) if the live database cannot be reached', false)
+  .option('--fix', 'apply safe automatic fixes (currently: add .lean() to read-only Mongoose queries)', false)
+  .option('--dry-run', 'with --fix: show the changes without writing files', false)
+  .option('--emit-indexes [file]', 'with --uri: write every suggested index to a reviewed script (.js for MongoDB, .sql for Postgres)')
   .action(async (path: string, o) => {
     const root = resolve(path);
     if (!existsSync(root)) {
@@ -94,6 +99,39 @@ program
     if (summary.live?.error) {
       console.error(pc.yellow(`querydig: live mode skipped: ${summary.live.error}`));
       if (o.liveRequired) process.exit(2);
+    }
+
+    if (o.fix) {
+      const res = applyFixes(root, summary.findings, { dryRun: o.dryRun });
+      const verb = o.dryRun ? 'would change' : 'changed';
+      if (!res.changes.length) {
+        console.error(pc.dim('querydig --fix: nothing to fix automatically. Only safe, mechanical edits are applied (.lean() on read-only Mongoose queries); everything else needs review.'));
+      } else {
+        console.error(pc.bold(`querydig --fix: ${verb} ${res.changes.length} line(s) in ${res.files.length} file(s)${o.dryRun ? ' (dry run, no files written)' : ''}`));
+        for (const c of res.changes) {
+          console.error(`  ${pc.underline(`${c.file}:${c.line}`)}  ${pc.dim(c.ruleId)} ${c.description}`);
+          console.error(pc.red(`  - ${c.before}`));
+          console.error(pc.green(`  + ${c.after}`));
+        }
+        if (!o.dryRun) {
+          const fixed = new Set(res.applied);
+          summary.findings = summary.findings.filter((f) => !fixed.has(f));
+          console.error(pc.dim('  Review with git diff and run your tests. N+1 rewrites, limits and projections are never changed automatically.\n'));
+        }
+      }
+    }
+
+    if (o.emitIndexes !== undefined) {
+      const plans = planIndexes(summary.findings);
+      if (!live) console.error(pc.yellow('querydig: --emit-indexes needs --uri (index suggestions come from live query plans).'));
+      else if (!plans.length) console.error(pc.green('querydig: no missing indexes found.'));
+      else {
+        const ext = plans[0].index.adapter === 'mongodb' ? 'js' : 'sql';
+        const file = resolve(typeof o.emitIndexes === 'string' ? o.emitIndexes : `querydig-indexes.${ext}`);
+        writeFileSync(file, renderIndexScript(plans, VERSION));
+        console.error(pc.green(`querydig: wrote ${plans.length} suggested index(es) to ${file}`));
+        for (const p of plans) console.error(`  ${p.index.statement} ${pc.dim(`(${p.reasons.length} finding${p.reasons.length === 1 ? '' : 's'})`)}`);
+      }
     }
 
     if (updating) {

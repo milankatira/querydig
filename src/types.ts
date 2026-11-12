@@ -24,6 +24,18 @@ export interface Finding {
   shapeId?: string;
   /** evidence gathered from a live database (--uri) */
   evidence?: Evidence;
+  /** a safe, mechanical code edit that --fix can apply (UTF-16 offset into the file) */
+  autofix?: { offset: number; insert: string; description: string };
+  /** index that would fix this finding (from live mode) */
+  suggestedIndex?: SuggestedIndex;
+}
+
+export interface SuggestedIndex {
+  adapter: 'mongodb' | 'postgres';
+  database: string;
+  table: string;
+  keys: SortKey[];
+  statement: string;
 }
 
 export interface SortKey { key: string; dir: 1 | -1 }

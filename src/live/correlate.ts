@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { RULE_MAP } from '../rules.js';
-import type { Evidence, Finding, QueryShape, Severity } from '../types.js';
-import { indexCovers, matchSlowQuery, suggestIndex } from './match.js';
+import type { Evidence, Finding, QueryShape, Severity, SortKey, SuggestedIndex } from '../types.js';
+import { indexCovers, indexKeys, matchSlowQuery, suggestIndex } from './match.js';
 import type { LiveData, PlanSummary } from './types.js';
 
 export const THRESHOLDS = { big: 100_000, huge: 1_000_000, scanMin: 10_000, tiny: 1_000, criticalMs: 1_000 };
@@ -25,6 +25,10 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
   const rowsOf = (t?: string) => (t ? data.tables.get(t)?.rows : undefined);
   const tableIndexes = (t: string) => data.indexes.filter((i) => i.table === t);
   const planText = (p: PlanSummary) => `${p.text}${p.docsExamined != null ? ` · ${fmt(p.docsExamined)} ${u} examined` : ''}${p.ms != null ? ` · ${p.ms}ms` : ''}`;
+  const spec = (table: string, f: string[], so: SortKey[]): SuggestedIndex | undefined => {
+    const statement = suggestIndex(data.adapter, table, f, so);
+    return statement ? { adapter: data.adapter, database: data.database, table, keys: indexKeys(f, so), statement } : undefined;
+  };
   const handled = new Set<string>(); // shapeIds whose full-scan / sort issue is already attached to a static finding
 
   // ---- 1. enrich static findings ------------------------------------------
@@ -47,7 +51,7 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
           handled.add(shape.id);
           const idx = suggestIndex(data.adapter, table, shape.filterKeys, shape.sortKeys);
           const g = change(f, 'critical', { ...base, note: `Each iteration does a full scan of ${table} (${fmt(rows)} ${u}): N × ${fmt(rows)} ${u} read.` });
-          return idx ? { ...g, fix: `${f.fix} Until then, at least add an index: ${idx}` } : g;
+          return idx ? { ...g, fix: `${f.fix} Until then, at least add an index: ${idx}`, suggestedIndex: spec(table, shape.filterKeys, shape.sortKeys) } : g;
         }
         if (plan?.indexUsed) return { ...f, evidence: { ...base, note: `${base.note}. The inner query uses an index, so each round-trip is cheap, but N round-trips remain.` } };
         return { ...f, evidence: base };
@@ -64,7 +68,7 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
         const covered = tableIndexes(table).find((i) => indexCovers(i, shape.filterKeys, shape.sortKeys));
         if (covered) return change(f, 'low', { ...base, source: 'indexes', index: covered.name, note: `Index ${covered.name} already serves this filter and sort; adding a limit is still recommended.` });
         const idx = suggestIndex(data.adapter, table, shape.filterKeys, shape.sortKeys);
-        return { ...f, evidence: { ...base, note: `No index serves this sort on ${table}${rows != null ? ` (${fmt(rows)} ${u})` : ''}.` }, fix: idx ? `Add .limit(n) and create: ${idx}` : f.fix };
+        return { ...f, evidence: { ...base, note: `No index serves this sort on ${table}${rows != null ? ` (${fmt(rows)} ${u})` : ''}.` }, fix: idx ? `Add .limit(n) and create: ${idx}` : f.fix, suggestedIndex: spec(table, shape.filterKeys, shape.sortKeys) };
       }
       case 'SQ004': case 'MQ004': case 'SQ005': case 'SQ003': case 'MQ002':
         if (plan?.fullScan) handled.add(shape.id);
@@ -99,7 +103,7 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
         message: `Full ${data.adapter === 'mongodb' ? 'collection' : 'table'} scan of ${table} (${fmt(rows)} ${u})${s.filterKeys.length ? ` filtering on ${s.filterKeys.join(', ')}` : ''}${s.inLoop ? ', inside a loop' : ''}.`,
         fix: idx ? `Create an index: ${idx}` : undefined,
         evidence: { ...ev, note: `${table}: ${fmt(rows)} ${u} · ${planText(plan)}` },
-        fingerprint: fp('LV001', s.file, table, key), shapeId: s.id,
+        fingerprint: fp('LV001', s.file, table, key), shapeId: s.id, suggestedIndex: spec(table, s.filterKeys, s.sortKeys),
       });
     } else if (plan.inMemorySort && s.sortKeys.length && rows >= THRESHOLDS.scanMin) {
       add('LV002', {
@@ -107,7 +111,7 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
         message: `Sorts ${table} in memory on ${s.sortKeys.map((k) => k.key).join(', ')} (${fmt(rows)} ${u}).`,
         fix: idx ? `Create an index: ${idx}` : undefined,
         evidence: { ...ev, note: `${table}: ${fmt(rows)} ${u} · ${planText(plan)}` },
-        fingerprint: fp('LV002', s.file, table, key), shapeId: s.id,
+        fingerprint: fp('LV002', s.file, table, key), shapeId: s.id, suggestedIndex: spec(table, s.filterKeys, s.sortKeys),
       });
     }
   }
@@ -125,6 +129,7 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
       fix: idx && !covered ? `Likely missing index: ${idx}` : undefined,
       evidence: { source: 'profiler', collection: q.table, ms: Math.round(q.meanMs), plan: q.plan, docsExamined: q.docsExamined, note: `${q.calls} call(s), mean ${Math.round(q.meanMs)}ms${q.docsExamined != null ? `, ${fmt(q.docsExamined)} ${u} examined` : ''}` },
       fingerprint: fp('LV003', q.table, q.filterKeys.join(','), q.sortKeys.map((k) => k.key).join(',')), shapeId: shape?.id,
+      suggestedIndex: q.table && idx && !covered ? spec(q.table, q.filterKeys, q.sortKeys) : undefined,
       confidence: shape ? 'high' : 'medium',
     });
   }
@@ -155,7 +160,7 @@ export function correlate(findings: Finding[], shapes: QueryShape[], data: LiveD
       message: `${k.table}.${k.column} references ${k.refTable} but has no index; ${users.length} quer${users.length === 1 ? 'y filters' : 'ies filter'} on it.`,
       fix: `CREATE INDEX CONCURRENTLY ON "${k.table}" ("${k.column}");`,
       evidence: { source: 'indexes', collection: k.table, rows: rowsOf(k.table), note: `no index starts with ${k.column}` },
-      fingerprint: fp('LV005', k.table, k.column), shapeId: s.id,
+      fingerprint: fp('LV005', k.table, k.column), shapeId: s.id, suggestedIndex: spec(k.table, [k.column], []),
     });
   }
 

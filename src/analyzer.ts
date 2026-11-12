@@ -772,7 +772,9 @@ class Analyzer {
     const modelLike = /^[A-Z]/.test(q.receiver.replace(/^this\./, '')) || /model$/i.test(q.receiver);
     if (this.isJs && q.orm === 'mongoose' && modelLike && ['find', 'findOne', 'findById'].includes(q.method) && !this.chainHas(q, /^lean$/)) {
       const usesSave = this.chainHas(q, /^(save|populate)$/);
-      if (!usesSave && q.method === 'find') this.add('MQ011', q.node, q, { message: `\`${q.collection ?? q.receiver}.find()\` hydrates full Mongoose documents.`, confidence: 'low' });
+      if (!usesSave && q.method === 'find') {
+        this.add('MQ011', q.node, q, { message: `\`${q.collection ?? q.receiver}.find()\` hydrates full Mongoose documents.`, confidence: 'low', autofix: this.leanFix(q) });
+      }
     }
 
     // sort without limit
@@ -843,6 +845,27 @@ class Analyzer {
     if (pops.length >= 3 || pops.some((p) => /populate\s*:/.test(p.args))) {
       this.add('MQ007', pops[0].node, q, { message: `${pops.length} populate() call(s)${pops.some((p) => /populate\s*:/.test(p.args)) ? ' with nested populate' : ''}: each path is an extra query.` });
     }
+  }
+
+  /**
+   * Where to insert `.lean()`: after the last query-builder call, before exec()/then()/cursor().
+   * Returns undefined when the file mutates documents (save, toObject, markModified...), because
+   * lean() returns plain objects and those calls would break.
+   */
+  private leanFix(q: QueryCall): Finding['autofix'] {
+    if (/\.(save|toObject|toJSON|markModified|isModified|depopulate|validate|increment|\$set|\$inc|ownerDocument|\$isDeleted)\s*\(/.test(this.src)) return undefined;
+    const TERMINAL = /^(exec|then|catch|finally|cursor|stream|eachAsync|countDocuments|count|explain|toArray|session|orFail)$/;
+    let at = q.node;
+    for (;;) {
+      const p = at.parent;
+      const pm = p ? this.spec.member[p.type] : undefined;
+      if (!p || !pm || !same(p.childForFieldName(pm[0]), at)) break;
+      const pp = p.parent;
+      if (!pp || !this.spec.call.includes(pp.type) || !same(pp.childForFieldName('function'), p)) break;
+      if (TERMINAL.test(p.childForFieldName(pm[1])?.text ?? '')) break;
+      at = pp;
+    }
+    return { offset: at.endIndex, insert: '.lean()', description: 'append .lean()' };
   }
 
   private regexIssue(q: QueryCall): string | null {
@@ -977,7 +1000,7 @@ class Analyzer {
 
   // ------------------------------------------------------------- output
 
-  private add(ruleId: string, node: TSNode, q: QueryCall, o: { severity?: Severity; message: string; fix?: string; confidence?: Confidence }): void {
+  private add(ruleId: string, node: TSNode, q: QueryCall, o: { severity?: Severity; message: string; fix?: string; confidence?: Confidence; autofix?: Finding['autofix'] }): void {
     const rule = RULE_MAP.get(ruleId)!;
     const line = node.startPosition.row + 1;
     const endRow = Math.min(node.endPosition.row, node.startPosition.row + 2);
@@ -1000,6 +1023,7 @@ class Analyzer {
       confidence: o.confidence ?? q.confidence,
       fingerprint,
       ...(q.shapeId ? { shapeId: q.shapeId } : {}),
+      ...(o.autofix ? { autofix: o.autofix } : {}),
     });
   }
 

@@ -44,10 +44,16 @@ export function indexCovers(index: IndexInfo, filterKeys: string[], sortKeys: So
   return same || reversed;
 }
 
-/** ESR-ordered index suggestion as a ready-to-run statement. */
-export function suggestIndex(adapter: 'mongodb' | 'postgres', table: string, filterKeys: string[], sortKeys: SortKey[]): string | undefined {
+/** ESR order: equality fields, then sort fields. */
+export function indexKeys(filterKeys: string[], sortKeys: SortKey[]): SortKey[] {
   const keys: SortKey[] = [...new Set(filterKeys)].map((key) => ({ key, dir: 1 as const }));
   for (const s of sortKeys) if (!keys.some((k) => k.key === s.key)) keys.push(s);
+  return keys;
+}
+
+/** ESR-ordered index suggestion as a ready-to-run statement. */
+export function suggestIndex(adapter: 'mongodb' | 'postgres', table: string, filterKeys: string[], sortKeys: SortKey[]): string | undefined {
+  const keys = indexKeys(filterKeys, sortKeys);
   if (!keys.length) return undefined;
   if (adapter === 'mongodb') return `db.${table}.createIndex({ ${keys.map((k) => `${/^[A-Za-z_$][\w$]*$/.test(k.key) ? k.key : `"${k.key}"`}: ${k.dir}`).join(', ')} })`;
   return `CREATE INDEX CONCURRENTLY ON "${table}" (${keys.map((k) => `"${k.key}"${k.dir === -1 ? ' DESC' : ''}`).join(', ')});`;

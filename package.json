@@ -1,6 +1,6 @@
 {
   "name": "querydig",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Find slow, N+1 and unoptimized database queries (MongoDB, Postgres, MySQL) in JS/TS, Python and Go code, with optional read-only live evidence from your database. Zero-config CLI for local runs and CI.",
   "main": "./dist/index.js",
   "scripts": {
