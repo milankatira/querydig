@@ -66,7 +66,7 @@ html.dark {
   --shadow: 0 30px 80px -40px rgb(0 0 0 / 0.9);
   color-scheme: dark;
 }
-:root, .band {
+:root {
   --fg-3: color-mix(in oklab, var(--fg) 3%, transparent);
   --fg-5: color-mix(in oklab, var(--fg) 5%, transparent);
   --fg-8: color-mix(in oklab, var(--fg) 8%, transparent);
@@ -391,15 +391,6 @@ footer { border-top: 1px solid var(--fg-8); padding: 88px 0 0; overflow: hidden;
 html.dark .cta-panel { background: rgb(255 255 255 / .015); }
 .cta-panel .bg-glow { top: -14rem; }
 @media (min-width: 768px) { .cta-panel { padding: 96px 48px; } }
-
-/* ---------- Contrast band ---------- */
-.band { --bg: #000319; --fg: #ffffff; --surface: #050822; --pos: #34d399; --glow: rgba(255,255,255,.1); --grid-stroke: rgb(255 255 255 / .04);
-  background: var(--bg); color: var(--fg); border-top: 0 !important; overflow: hidden; }
-html.dark .band { --bg: #060a2b; --surface: #0a0f36; border-top: 1px solid rgb(255 255 255 / .06) !important; border-bottom: 1px solid rgb(255 255 255 / .06); }
-.band .card { background: color-mix(in oklab, var(--fg) 3%, transparent); }
-.band + .section { border-top: 0; }
-.band::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, var(--grid-stroke) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-stroke) 1px, transparent 1px); background-size: 8px 8px; -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 70%); mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 70%); }
-.band .wrap { position: relative; }
 
 /* ---------- Report screenshot ---------- */
 .shot { margin: 0; border-radius: 20px; border: 1px solid var(--fg-10); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
@@ -774,7 +765,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
 </section>
 
 <!-- ============ PRIVACY ============ -->
-<section class="section privacy band" id="privacy">
+<section class="section privacy" id="privacy">
   <div class="wrap">
     <div class="head center">
       <span class="eyebrow reveal">Local-first</span>
