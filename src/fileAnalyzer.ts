@@ -2,17 +2,20 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { analyzeSourceFull } from './analyzer.js';
 import { langForFile } from './languages.js';
+import { PLUGINS } from './langs/index.js';
 import type { FileResult } from './types.js';
 
 const MAX_BYTES = 1_500_000;
 const QUICK_FILTER = /find|aggregate|query|execute|Query|Exec|objects|count|Count|update|Update|insert|Insert|delete|Delete|save|Save|create|Create|select|SELECT|First|Take|remove|upsert|distinct|Distinct/;
+/** Java/Ruby/PHP ORMs read through short verbs (User.all, ->get(), ->where(), .each) that the filter above misses. */
+const PLUGIN_QUICK_FILTER = /\b(all|get|first|where|paginate|pluck|lazy|chunk|load|flush|each|find_each|exists\?)\b/;
 
 export async function analyzeFile(root: string, rel: string): Promise<FileResult> {
   const lang = langForFile(rel);
   if (!lang) return { file: rel, findings: [] };
   try {
     const src = await readFile(join(root, rel), 'utf8');
-    if (src.length > MAX_BYTES || !QUICK_FILTER.test(src)) return { file: rel, findings: [] };
+    if (src.length > MAX_BYTES || !(QUICK_FILTER.test(src) || (PLUGINS[lang] && PLUGIN_QUICK_FILTER.test(src)))) return { file: rel, findings: [] };
     const { findings, shapes } = await analyzeSourceFull(src, { relPath: rel, lang });
     return { file: rel, findings, shapes };
   } catch (e) {

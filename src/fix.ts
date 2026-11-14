@@ -25,19 +25,21 @@ export function applyFixes(root: string, findings: Finding[], opts: { dryRun?: b
       continue;
     }
     const original = src;
-    const seen = new Set<number>();
     const ordered = [...list].sort((a, b) => b.autofix!.offset - a.autofix!.offset);
+    let floor = Infinity; // start of the last applied edit: later (earlier-offset) edits must end before it
     for (const f of ordered) {
       const { offset, insert, description } = f.autofix!;
-      if (seen.has(offset) || offset < 0 || offset > src.length) continue;
-      if (src.slice(offset, offset + insert.length) === insert) continue; // already applied
-      seen.add(offset);
+      const del = f.autofix!.deleteLength ?? 0;
+      if (offset < 0 || offset + del > src.length || offset + del > floor) continue; // overlapping / out of range
+      if (offset + del === floor && del === 0 && floor !== Infinity) continue; // same insertion point twice
+      if (del === 0 && src.slice(offset, offset + insert.length) === insert) continue; // insert already applied
       const lineStart = src.lastIndexOf('\n', offset - 1) + 1;
-      const lineEndIdx = src.indexOf('\n', offset);
+      const lineEndIdx = src.indexOf('\n', offset + del);
       const lineEnd = lineEndIdx === -1 ? src.length : lineEndIdx;
       const before = src.slice(lineStart, lineEnd);
-      src = src.slice(0, offset) + insert + src.slice(offset);
-      const after = src.slice(lineStart, lineEnd + insert.length);
+      src = src.slice(0, offset) + insert + src.slice(offset + del);
+      const after = src.slice(lineStart, lineEnd - del + insert.length);
+      floor = offset;
       changes.push({ file, line: src.slice(0, offset).split('\n').length, ruleId: f.ruleId, description, before: before.trim(), after: after.trim() });
       applied.push(f);
     }

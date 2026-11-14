@@ -17,11 +17,11 @@ export const CONFIG_FILES = ['querydig.config.json', '.querydigrc.json', '.query
 export const DEFAULT_IGNORE = [
   '**/node_modules/**', '**/dist/**', '**/build/**', '**/out/**', '**/.next/**', '**/.nuxt/**', '**/coverage/**',
   '**/vendor/**', '**/.git/**', '**/.venv/**', '**/venv/**', '**/__pycache__/**', '**/site-packages/**',
-  '**/*.min.js', '**/*.bundle.js', '**/*.d.ts', '**/.querydig/**',
+  '**/*.min.js', '**/*.bundle.js', '**/*.d.ts', '**/.querydig/**', '**/target/**', '**/.gradle/**', '**/.bundle/**',
 ];
 
 export const TEST_IGNORE = [
-  '**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/test_*.py', '**/*_test.py', '**/tests/**', '**/test/**',
+  '**/*.test.*', '**/*.spec.*', '**/*_test.go', '**/*Test.java', '**/*Tests.java', '**/*IT.java', '**/*_spec.rb', '**/*_test.rb', '**/*Test.php', '**/db/migrate/**', '**/test_*.py', '**/*_test.py', '**/tests/**', '**/test/**',
   '**/__tests__/**', '**/__mocks__/**', '**/spec/**', '**/specs/**', '**/benchmark/**', '**/benchmarks/**', '**/bench/**', '**/e2e/**', '**/fixtures/**', '**/migrations/**', '**/migration/**', '**/*migration*/**', '**/alembic/**', '**/tests.py', '**/conftest.py', '**/testdata/**', '**/testutil/**', '**/unittest/**', '**/testing/**', '**/seed/**', '**/seeds/**', '**/seeders/**',
 ];
 

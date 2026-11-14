@@ -144,6 +144,24 @@ export const RULES: RuleMeta[] = [
     fix: 'Rewrite as NOT EXISTS or a LEFT JOIN ... WHERE x IS NULL.',
   }),
 
+  r({
+    id: 'SQ009', name: 'count-for-existence-sql', title: 'COUNT used as an existence check', severity: 'low', db: 'sql',
+    why: 'count() makes the database count every matching row, even though the code only checks whether there is at least one. EXISTS / LIMIT 1 can stop at the first match.',
+    fix: 'Use an existence check: .exists() (Django), .exists? (Rails), ->exists() (Laravel), existsBy...() (Spring Data), or SELECT 1 ... LIMIT 1.',
+    example: {
+      bad: 'if Order.objects.filter(user=u).count() > 0:\n    ...',
+      good: 'if Order.objects.filter(user=u).exists():\n    ...',
+    },
+  }),
+  r({
+    id: 'SQ010', name: 'load-all-then-iterate', title: 'Whole table loaded into memory to iterate', severity: 'medium', db: 'sql',
+    why: 'Loading every row of a table and then iterating it holds the entire result set in memory and gets slower and riskier as the table grows.',
+    fix: 'Iterate in batches: find_each / in_batches (Rails), chunk() / lazy() / cursor() (Laravel), iterator(chunk_size=...) (Django), Stream/Slice with paging (Spring Data).',
+    example: {
+      bad: 'User.all.each do |u|\n  notify(u)\nend',
+      good: 'User.find_each do |u|\n  notify(u)\nend',
+    },
+  }),
   // ---------- live database (--uri) ----------
   r({
     id: 'LV001', name: 'full-scan', title: 'Query does a full collection / table scan', severity: 'high', db: 'any',
