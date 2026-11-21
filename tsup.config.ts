@@ -4,7 +4,7 @@ import { defineConfig } from 'tsup';
 const { version } = JSON.parse(readFileSync('./package.json', 'utf8'));
 
 export default defineConfig({
-  entry: ['src/cli.ts', 'src/worker.ts', 'src/index.ts'],
+  entry: ['src/cli.ts', 'src/worker.ts', 'src/index.ts', 'src/mcp.ts'],
   format: ['esm'],
   target: 'node20',
   platform: 'node',

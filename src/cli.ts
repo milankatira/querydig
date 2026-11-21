@@ -212,6 +212,14 @@ program
     console.log(pc.green(`created ${file}`));
   });
 
+program
+  .command('mcp')
+  .description('Start an MCP server (stdio) so AI assistants can find, fix and verify slow queries')
+  .action(async () => {
+    const { startMcpServer } = await import('./mcp.js');
+    await startMcpServer();
+  });
+
 function splitList(v?: string): string[] {
   return v ? v.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [];
 }

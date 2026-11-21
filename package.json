@@ -36,11 +36,13 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "commander": "^15.1.0",
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.14",
     "picocolors": "^1.1.1",
-    "web-tree-sitter": "0.22.6"
+    "web-tree-sitter": "0.22.6",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

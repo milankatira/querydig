@@ -96,6 +96,41 @@ npm i -D querydig
 
 Built-in noise control: `while`/`for {}` polling loops, batching loops (`skip`/`offset` in the loop), loops over collections or model classes, and array helpers like `arr.find(x => …)` or Python `str.find()` are not flagged.
 
+## AI assistants (MCP server)
+
+`querydig mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io) server, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can find slow queries, rewrite them and check their own fixes. querydig does the detection and verification; the assistant does the rewrite. No API key is needed and your code stays local.
+
+```bash
+claude mcp add querydig -- npx -y querydig mcp
+```
+
+Or in any client's MCP config:
+
+```json
+{
+  "mcpServers": {
+    "querydig": {
+      "command": "npx",
+      "args": ["-y", "querydig", "mcp"],
+      "env": { "QUERYDIG_DB_URI": "postgres://reader:***@replica-host/shop" }
+    }
+  }
+}
+```
+
+`QUERYDIG_DB_URI` is optional. Set it to give the assistant live evidence (row counts, query plans, slow queries, missing indexes) without putting the secret in the chat.
+
+| Tool | What it does |
+|---|---|
+| `scan_queries` | Scan a project (or just `files`, to verify an edit) and return findings by severity |
+| `get_finding_context` | Code around a finding with line numbers, nearby findings and the rule's before/after example |
+| `analyze_snippet` | Check a proposed rewrite before it is written to disk |
+| `apply_safe_fixes` | Mechanical fixes like `--fix`; dry run unless `dryRun: false` |
+| `suggest_indexes` | Read-only index plan from live query plans (needs a database) |
+| `explain_rule`, `list_rules` | Rule docs |
+
+The `optimize_queries` prompt runs the whole loop: scan → safe fixes → rewrite the worst findings one by one → verify each with querydig → summary table. In Claude Code, type `/mcp__querydig__optimize_queries`.
+
 ## Live mode: evidence from your database
 
 Static analysis finds the patterns. Live mode connects **read-only** to MongoDB or Postgres and checks them against reality: how big each collection is, which indexes exist, and what the query planner actually does.
