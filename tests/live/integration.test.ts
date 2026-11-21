@@ -4,13 +4,14 @@
  *      QUERYDIG_IT=1 npx vitest run tests/live/integration.test.ts
  */
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { scan } from '../../src/scan.js';
 
 const IT = process.env.QUERYDIG_IT === '1';
 const MONGO = process.env.QUERYDIG_IT_MONGO ?? 'mongodb://localhost:27018/shop';
 const PG = process.env.QUERYDIG_IT_PG ?? 'postgres://postgres:querydig@localhost:54329/shop';
-const root = new URL('../../examples/sample-app', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../../examples/sample-app', import.meta.url));
 const live = (uri: string, slowMs = 5) => ({ uri, slowMs, explainExecute: false, maxExplain: 200, timeoutMs: 5000 });
 
 async function mongoWrites(): Promise<number> {
@@ -86,7 +87,7 @@ describe.skipIf(!IT)('live: Postgres', () => {
 
 describe.skipIf(!IT)('live: CLI', () => {
   it('prints evidence lines', () => {
-    const out = execFileSync('npx', ['tsx', 'src/cli.ts', root, '--uri', MONGO, '--limit', '0'], { encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname, env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', CI: '' } });
+    const out = execFileSync('npx', ['tsx', 'src/cli.ts', root, '--uri', MONGO, '--limit', '0'], { encoding: 'utf8', cwd: fileURLToPath(new URL('../..', import.meta.url)), env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', CI: '' } });
     expect(out).toContain('live: mongodb shop');
     expect(out).toMatch(/live: .*COLLSCAN/);
   }, 60_000);
