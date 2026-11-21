@@ -3,7 +3,7 @@ export const SEVERITIES: Severity[] = ['critical', 'high', 'medium', 'low', 'inf
 export const SEVERITY_RANK: Record<Severity, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
 
 export type Db = 'mongodb' | 'sql' | 'unknown';
-export type LangId = 'javascript' | 'typescript' | 'tsx' | 'python' | 'go';
+export type LangId = 'javascript' | 'typescript' | 'tsx' | 'python' | 'go' | 'java' | 'ruby' | 'php';
 export type Confidence = 'high' | 'medium' | 'low';
 
 export interface Finding {
@@ -25,10 +25,16 @@ export interface Finding {
   /** evidence gathered from a live database (--uri) */
   evidence?: Evidence;
   /** a safe, mechanical code edit that --fix can apply (UTF-16 offset into the file) */
-  autofix?: { offset: number; insert: string; description: string };
+  autofix?: Autofix;
   /** index that would fix this finding (from live mode) */
   suggestedIndex?: SuggestedIndex;
 }
+
+/**
+ * A safe, mechanical edit: replace `deleteLength` characters (default 0, i.e. a pure insert)
+ * at UTF-16 `offset` with `insert`.
+ */
+export interface Autofix { offset: number; insert: string; deleteLength?: number; description: string }
 
 export interface SuggestedIndex {
   adapter: 'mongodb' | 'postgres';

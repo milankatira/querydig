@@ -10,8 +10,8 @@ npx querydig            # scan the current directory
 
 - **Runs locally.** No account, no server, your code never leaves the machine.
 - **Fast.** Tree-sitter (WASM) parsing in a worker pool: about 2,000 files in under 1 second.
-- **Multi-language.** JavaScript, TypeScript, Python and Go.
-- **Multi-database.** MongoDB (Mongoose, native driver, PyMongo/Motor, mongo-go-driver) and SQL (Prisma, TypeORM, Sequelize, pg/mysql2/knex raw, Django ORM, SQLAlchemy, DB-API cursors, GORM/xorm, `database/sql`).
+- **Multi-language.** JavaScript, TypeScript, Python, Go, Java, Ruby and PHP.
+- **Multi-database.** MongoDB (Mongoose, native driver, PyMongo/Motor, mongo-go-driver) and SQL (Prisma, TypeORM, Sequelize, pg/mysql2/knex raw, Django ORM, SQLAlchemy, DB-API cursors, GORM/xorm, `database/sql`, Spring Data JPA, Hibernate, JDBC/JdbcTemplate, jOOQ, ActiveRecord, Sequel, Laravel Eloquent/Query Builder, Doctrine, PDO/mysqli). MongoDB also via the Java driver, Spring Data MongoDB, Mongoid and the MongoDB PHP library.
 - **Live evidence (optional).** Point `--uri` at a MongoDB or Postgres replica to confirm full scans, missing and unused indexes, and slow queries.
 - **CI-ready.** `--fail-on`, baselines, `--diff`, SARIF for GitHub code scanning, Markdown for PR comments, HTML report.
 
@@ -54,7 +54,7 @@ npx querydig --baseline .querydig-baseline.json --fail-on high   # only NEW issu
 npx querydig rules                          # list rules
 npx querydig explain QD001                  # why + before/after example
 npx querydig init                           # create querydig.config.json
-npx querydig --fix                          # apply safe automatic fixes (.lean())
+npx querydig --fix                          # apply safe automatic fixes (see Auto-fix)
 npx querydig --uri … --emit-indexes         # write missing indexes to a script
 ```
 
@@ -91,6 +91,8 @@ npm i -D querydig
 | SQ006 | medium | SQL | `WHERE LOWER(col) = …` (non-sargable) |
 | SQ007 | high | SQL | `ORDER BY RAND()` |
 | SQ008 | medium | SQL | `NOT IN (SELECT …)` |
+| SQ009 | low | SQL | `count()` used only as an existence check (use `exists()` / `exists?` / `existsBy…`) |
+| SQ010 | medium | SQL | Whole table loaded to iterate (`User.all.each`, `foreach (User::all() …)`, `for (… : repo.findAll())`) |
 
 Built-in noise control: `while`/`for {}` polling loops, batching loops (`skip`/`offset` in the loop), loops over collections or model classes, and array helpers like `arr.find(x => …)` or Python `str.find()` are not flagged.
 
@@ -167,7 +169,18 @@ npx querydig --fix --dry-run   # preview
 npx querydig --fix             # write the changes, then review with git diff
 ```
 
-Today that means adding `.lean()` to read-only Mongoose queries (MQ011), placed before `.exec()` / `.then()`. Files that call `.save()`, `.toObject()`, `.markModified()` and similar on documents are skipped. querydig never rewrites N+1 loops, adds limits or changes projections on its own, because those change behaviour. Each of those findings comes with a fix to apply by hand, or with an AI assistant.
+| Rule | Language / library | Before → after |
+|---|---|---|
+| MQ011 | Mongoose | `Model.find(f)` → `Model.find(f).lean()` (skipped in files that `.save()`, `.toObject()`, `.markModified()`… documents) |
+| MQ008 | Mongoose / Node driver / PyMongo / Go driver | `countDocuments(f) > 0` → `countDocuments(f).limit(1)` / `(f, { limit: 1 })` / `(f, limit=1)` / `options.Count().SetLimit(1)` (Go: only if `options` is already imported) |
+| SQ009 | Django | `qs.count() > 0` → `qs.exists()`, `qs.count() == 0` → `not qs.exists()` |
+| SQ009 | Rails | `rel.count > 0` / `.present?` → `rel.exists?`, `rel.count == 0` / `.zero?` → `!rel.exists?` |
+| SQ009 | Laravel | `->count() > 0` → `->exists()`, `->count() === 0` / `->get()->isEmpty()` → `->doesntExist()` |
+| SQ009 | Spring Data | `repo.countByX(..) > 0` → `repo.existsByX(..)` (only when `existsByX` is already declared) |
+| SQ010 | Rails | `Model.all.each do \|x\|` → `Model.find_each do \|x\|` (only without `order`/`limit`/`select`…, result unused) |
+| SQ010 | Laravel | `foreach (Model::all() as $m)` → `foreach (Model::lazy() as $m)` |
+
+A fix is only applied when the rewrite keeps the same behaviour: count fixes only fire when the result is compared with 0 (not `> 1` or stored), and are skipped on grouped, limited or combined queries. querydig never rewrites N+1 loops, adds result limits or changes projections on its own. Each of those findings comes with a fix to apply by hand, or with an AI assistant.
 
 **`--emit-indexes [file]`** (with `--uri`) writes every missing index found in the query plans to one reviewed script. Indexes are de-duplicated, and an index that's a prefix of another is folded into it:
 
@@ -257,7 +270,7 @@ console.log(summary.bySeverity, summary.grade);
 
 - Live mode for MySQL (`performance_schema` + `EXPLAIN`).
 - Repo-wide index recommendations and PR comments.
-- Java/Kotlin (Hibernate/Spring Data), Ruby (ActiveRecord), PHP (Eloquent).
+- Kotlin and C#.
 - An official GitHub Action and incremental cache.
 
 ## License

@@ -1,18 +1,19 @@
 import { createHash } from 'node:crypto';
 import { LANGS, type LangSpec } from './languages.js';
+import { PLUGINS, type CallInfo, type LangPlugin } from './langs/index.js';
 import { getParser, type TSNode } from './parser.js';
 import { RULE_MAP } from './rules.js';
-import type { Confidence, Db, Finding, LangId, QueryShape, Severity, SortKey } from './types.js';
+import type { Autofix, Confidence, Db, Finding, LangId, QueryShape, Severity, SortKey } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Operation catalogue
 // ---------------------------------------------------------------------------
 
-type Kind = 'read' | 'readMany' | 'write' | 'batchWrite' | 'count' | 'aggregate' | 'raw';
-type Hint = 'none' | 'weak' | 'strong';
-interface OpDef { kind: Kind; db: Db | 'any'; hint: Hint; orm?: string }
+export type Kind = 'read' | 'readMany' | 'write' | 'batchWrite' | 'count' | 'aggregate' | 'raw';
+export type Hint = 'none' | 'weak' | 'strong';
+export interface OpDef { kind: Kind; db: Db | 'any'; hint: Hint; orm?: string }
 
-const op = (kind: Kind, db: Db | 'any', hint: Hint = 'none', orm?: string): OpDef => ({ kind, db, hint, orm });
+export const op = (kind: Kind, db: Db | 'any', hint: Hint = 'none', orm?: string): OpDef => ({ kind, db, hint, orm });
 
 const JS_OPS: Record<string, OpDef> = {
   find: op('readMany', 'any', 'weak'),
@@ -61,6 +62,7 @@ const JS_OPS: Record<string, OpDef> = {
   findBy: op('readMany', 'sql', 'none', 'typeorm'),
   findAndCount: op('readMany', 'sql', 'none', 'typeorm'),
   findAndCountBy: op('readMany', 'sql', 'none', 'typeorm'),
+  countBy: op('count', 'sql', 'none', 'typeorm'),
   getMany: op('readMany', 'sql', 'none', 'typeorm'),
   getOne: op('read', 'sql', 'none', 'typeorm'),
   getRawMany: op('readMany', 'sql', 'none', 'typeorm'),
@@ -148,11 +150,12 @@ const GO_OPS: Record<string, OpDef> = {
   Save: op('write', 'sql', 'weak', 'gorm'),
   Updates: op('write', 'sql', 'weak', 'gorm'),
   CreateInBatches: op('batchWrite', 'sql', 'weak', 'gorm'),
+  Count: op('count', 'sql', 'weak', 'gorm'),
 };
 
-const HINT_RE = /(model|collection|\bcoll\b|repo|repository|\bdb\b|_db\b|db_|database|prisma|session|cursor|\bcur\b|pool|client|\bconn\b|connection|knex|sequelize|objects|\btx\b|\btrx\b|dao|datasource|\bem\b|entitymanager|mongo|gorm|stmt)/i;
-const SQL_RECEIVER_RE = /(prisma|repository|repo\b|objects|session|entitymanager|\bem\b|knex|sequelize|gorm|_set$)/i;
-const SQL_TEXT_RE = /^\s*(select|insert|update|delete|with|replace)\b/i;
+export const HINT_RE = /(model|collection|\bcoll\b|repo|repository|\bdb\b|_db\b|db_|database|prisma|session|cursor|\bcur\b|pool|client|\bconn\b|connection|knex|sequelize|objects|\btx\b|\btrx\b|dao|datasource|\bem\b|entitymanager|mongo|gorm|stmt)/i;
+export const SQL_RECEIVER_RE = /(prisma|repository|repo\b|objects|session|entitymanager|\bem\b|knex|sequelize|gorm|_set$)/i;
+export const SQL_TEXT_RE = /^\s*(select|insert|update|delete|with|replace)\b/i;
 
 const MONGO_FILE_RE = /\b(mongoose|mongodb|pymongo|motor|mongoengine|go\.mongodb\.org|bson)\b/;
 const SQL_FILE_RE = /(@prisma\/client|\bprisma\b|typeorm|sequelize|\bknex\b|['"]pg['"]|mysql|sqlite|sqlalchemy|\bdjango\b|gorm\.io|database\/sql|sqlx|psycopg|drizzle|kysely|pgx)/;
@@ -168,8 +171,8 @@ const DEFAULT_TEST_LOOP_BREAKERS = new Set(['while_statement', 'do_statement']);
 
 // ---------------------------------------------------------------------------
 
-interface ChainLink { name: string; args: string; node: TSNode }
-interface QueryCall {
+export interface ChainLink { name: string; args: string; node: TSNode }
+export interface QueryCall {
   node: TSNode;
   top: TSNode;
   method: string;
@@ -185,14 +188,14 @@ interface QueryCall {
   confidence: Confidence;
   shapeId?: string;
 }
-interface Ctx { depth: number; over: boolean; loopLine?: number; overVar?: string; loopVars?: string[]; iterName?: string }
+export interface Ctx { depth: number; over: boolean; loopLine?: number; overVar?: string; loopVars?: string[]; iterName?: string }
 
 export interface AnalyzeOptions { relPath: string; lang: LangId }
 
-const same = (a: TSNode | null | undefined, b: TSNode | null | undefined) =>
+export const same = (a: TSNode | null | undefined, b: TSNode | null | undefined) =>
   !!a && !!b && a.startIndex === b.startIndex && a.endIndex === b.endIndex && a.type === b.type;
 
-const stripQuotes = (s: string) => s.replace(/^[rRbBuUfF]{0,2}(['"`]{1,3})([\s\S]*?)\1$/, '$2');
+export const stripQuotes = (s: string) => s.replace(/^[rRbBuUfF]{0,2}(['"`]{1,3})([\s\S]*?)\1$/, '$2');
 
 export interface AnalyzeResult { findings: Finding[]; shapes: QueryShape[] }
 
@@ -226,32 +229,61 @@ export function sqlShape(sql: string): { table?: string; filterKeys: string[]; s
   return { table: table ? unq(table) : undefined, filterKeys: [...new Set(filterKeys)], sortKeys, hasLimit: /\blimit\b|\bfetch\s+first\b/i.test(sql) };
 }
 
-class Analyzer {
-  private lines: string[];
-  private findings: Finding[] = [];
+export class Analyzer {
+  lines: string[];
+  findings: Finding[] = [];
   shapes: QueryShape[] = [];
-  private queryVars = new Set<string>();
-  private hasMongo: boolean;
-  private hasSql: boolean;
-  private hasMongoose: boolean;
-  private isJs: boolean;
+  queryVars = new Set<string>();
+  hasMongo: boolean;
+  hasSql: boolean;
+  hasMongoose: boolean;
+  isJs: boolean;
 
-  constructor(private src: string, private opts: AnalyzeOptions, private spec: LangSpec) {
+  readonly plugin: LangPlugin | undefined;
+
+  constructor(readonly src: string, readonly opts: AnalyzeOptions, readonly spec: LangSpec) {
     this.lines = src.split('\n');
-    this.hasMongo = MONGO_FILE_RE.test(src);
-    this.hasSql = SQL_FILE_RE.test(src);
+    this.plugin = PLUGINS[spec.id];
+    const hints = this.plugin?.fileHints;
+    this.hasMongo = MONGO_FILE_RE.test(src) || !!hints?.mongo?.test(src);
+    this.hasSql = SQL_FILE_RE.test(src) || !!hints?.sql?.test(src);
     this.hasMongoose = /\bmongoose\b/.test(src) || /@nestjs\/mongoose|InjectModel/.test(src);
     this.isJs = spec.id === 'javascript' || spec.id === 'typescript' || spec.id === 'tsx';
   }
 
   run(root: TSNode): Finding[] {
     this.visit(root, { depth: 0, over: false });
+    this.plugin?.finish?.(root, this);
     return this.applySuppressions();
+  }
+
+  /** `receiver.method(args)` parts of a call node, via the plugin or the `function` field. */
+  callInfo(node: TSNode): CallInfo | null {
+    if (this.plugin?.callInfo) return this.plugin.callInfo(node);
+    const callee = node.childForFieldName('function');
+    if (!callee) return null;
+    const mf = this.spec.member[callee.type];
+    const args = node.childForFieldName('arguments');
+    if (!mf) return { method: callee.text, methodNode: callee, receiver: null, args };
+    const m = callee.childForFieldName(mf[1]);
+    return { method: m?.text ?? '', methodNode: m, receiver: callee.childForFieldName(mf[0]), args };
+  }
+
+  /** The call that uses `node` as its receiver (`node.next()`), if any. */
+  parentCall(node: TSNode): TSNode | null {
+    for (let p = node.parent, i = 0; p && i < 2; p = p.parent, i++) {
+      if (this.spec.call.includes(p.type)) {
+        const ci = this.callInfo(p);
+        return ci && same(ci.receiver, node) ? p : null;
+      }
+      if (!this.spec.member[p.type]) return null;
+    }
+    return null;
   }
 
   // ------------------------------------------------------------- traversal
 
-  private visit(node: TSNode, ctx: Ctx): void {
+  visit(node: TSNode, ctx: Ctx): void {
     const t = node.type;
     if (t === 'comment') return;
     if (this.spec.functions.includes(t)) ctx = { depth: 0, over: false };
@@ -263,7 +295,7 @@ class Analyzer {
     for (const c of node.namedChildren) this.visit(c, ctx);
   }
 
-  private identsOf(node: TSNode | null | undefined): string[] {
+  identsOf(node: TSNode | null | undefined): string[] {
     if (!node) return [];
     const out: string[] = [];
     const stack = [node];
@@ -275,7 +307,7 @@ class Analyzer {
     return out;
   }
 
-  private inner(ctx: Ctx, node: TSNode, iterable: TSNode | null, forceOver = false, vars?: TSNode | null): Ctx {
+  inner(ctx: Ctx, node: TSNode, iterable: TSNode | null, forceOver = false, vars?: TSNode | null): Ctx {
     const nextRecv = iterable ? /^([A-Za-z_]\w*)\.Next\(/.exec(iterable.text)?.[1] : undefined;
     const overVar = nextRecv ?? (iterable
       ? (this.spec.call.includes(iterable.type) || iterable.type === 'await_expression') && iterable.text.length <= 60
@@ -290,9 +322,10 @@ class Analyzer {
     };
   }
 
-  private visitLoop(node: TSNode, ctx: Ctx): void {
+  visitLoop(node: TSNode, ctx: Ctx): void {
     const t = node.type;
     const id = this.spec.id;
+    if (this.plugin?.visitLoop?.(node, ctx, this)) return;
 
     // while / do-while are usually polling or batching loops: don't count as N+1 loops
     if (DEFAULT_TEST_LOOP_BREAKERS.has(t)) {
@@ -367,9 +400,10 @@ class Analyzer {
     for (const c of node.namedChildren) this.visit(c, inner);
   }
 
-  private visitCall(node: TSNode, ctx: Ctx): void {
+  visitCall(node: TSNode, ctx: Ctx): void {
     const q = this.classify(node);
     if (q) this.evaluate(q, ctx);
+    if (this.plugin?.visitCall?.(node, ctx, this)) return;
 
     // iterating callbacks: users.map(async u => ...)
     const callee = node.childForFieldName('function');
@@ -396,21 +430,27 @@ class Analyzer {
 
   // ------------------------------------------------------------- helpers
 
-  private argNodes(call: TSNode): TSNode[] {
-    const a = call.childForFieldName('arguments');
+  argNodes(call: TSNode): TSNode[] {
+    const a = this.plugin?.callInfo ? this.callInfo(call)?.args ?? null : call.childForFieldName('arguments');
     if (!a) return [];
     if (a.type === 'template_string' || a.type === 'generator_expression') return [a];
     return a.namedChildren.filter((c) => c.type !== 'comment');
   }
 
   /** Dotted path of an expression without call arguments: `db.collection().find` */
-  private path(node: TSNode | null, depth = 0): string {
+  path(node: TSNode | null, depth = 0): string {
     if (!node || depth > 12) return '';
     const mf = this.spec.member[node.type];
     if (mf) return `${this.path(node.childForFieldName(mf[0]), depth + 1)}.${node.childForFieldName(mf[1])?.text ?? ''}`;
-    if (this.spec.call.includes(node.type)) return `${this.path(node.childForFieldName('function'), depth + 1)}()`;
+    if (this.spec.call.includes(node.type)) {
+      if (!this.plugin?.callInfo) return `${this.path(node.childForFieldName('function'), depth + 1)}()`;
+      const ci = this.callInfo(node);
+      if (!ci) return node.type;
+      return `${ci.receiver ? `${this.path(ci.receiver, depth + 1)}.` : ''}${ci.method}()`;
+    }
     switch (node.type) {
       case 'identifier': case 'this': case 'self': case 'property_identifier': case 'field_identifier': case 'type_identifier':
+      case 'constant': case 'name': case 'variable_name': case 'instance_variable': case 'scope_resolution':
         return node.text;
       case 'await_expression': case 'parenthesized_expression': case 'non_null_expression': case 'as_expression': case 'await':
         return this.path(node.namedChildren[0] ?? null, depth + 1);
@@ -421,25 +461,25 @@ class Analyzer {
     }
   }
 
-  private rootIdent(node: TSNode): string | undefined {
+  rootIdent(node: TSNode): string | undefined {
     const p = this.path(node);
     const m = /^[A-Za-z_$][\w$]*/.exec(p.replace(/^(this|self)\./, ''));
     return m?.[0];
   }
 
-  private containsQuery(node: TSNode, depth = 0): boolean {
+  containsQuery(node: TSNode, depth = 0): boolean {
     if (depth > 40) return false;
     if (this.spec.call.includes(node.type) && this.classify(node, true)) return true;
     return node.namedChildren.some((c) => this.containsQuery(c, depth + 1));
   }
 
-  private isOverResults(iterable: TSNode): boolean {
+  isOverResults(iterable: TSNode): boolean {
     const id = this.rootIdent(iterable);
     if (id && this.queryVars.has(id)) return true;
     return this.containsQuery(iterable);
   }
 
-  private collectionName(receiver: TSNode | null): string | undefined {
+  collectionName(receiver: TSNode | null): string | undefined {
     if (!receiver) return undefined;
     const txt = receiver.text;
     const m = /(?:collection|Collection|getCollection)\(\s*['"`]([\w.-]+)['"`]/.exec(txt) ?? /\[\s*['"]([\w.-]+)['"]\s*\]$/.exec(txt);
@@ -453,13 +493,11 @@ class Analyzer {
 
   // ------------------------------------------------------------- classification
 
-  private classify(node: TSNode, quick = false): QueryCall | null {
-    const callee = node.childForFieldName('function');
-    if (!callee) return null;
-    const mf = this.spec.member[callee.type];
-    if (!mf) return null;
-    const method = callee.childForFieldName(mf[1])?.text ?? '';
-    const receiverNode = callee.childForFieldName(mf[0]);
+  classify(node: TSNode, quick = false): QueryCall | null {
+    const ci = this.callInfo(node);
+    if (!ci) return null;
+    const method = ci.method;
+    const receiverNode = ci.receiver;
     if (!method || !receiverNode) return null;
     const receiver = this.path(receiverNode);
     if (BUILTIN_ROOTS.has(receiver.split(/[.([]/)[0])) return null;
@@ -468,7 +506,11 @@ class Analyzer {
 
     let def: OpDef | undefined;
     const id = this.spec.id;
-    if (id === 'python') {
+    if (this.plugin) {
+      const d = this.plugin.opDef?.(method, receiver, args, this, node);
+      if (d === null) return null;
+      def = d ?? (this.plugin.ops && Object.prototype.hasOwnProperty.call(this.plugin.ops, method) ? this.plugin.ops[method] : undefined);
+    } else if (id === 'python') {
       if (/(^|\.)objects(\.|\(|$)|_set$/.test(receiver) && DJANGO_OPS[method]) def = op(DJANGO_OPS[method], 'sql', 'none', 'django');
       else if (/session|\bdb\b/i.test(receiver) && SQLA_OPS[method] && !/\.objects/.test(receiver)) def = op(SQLA_OPS[method], 'sql', 'none', 'sqlalchemy');
       else def = PY_OPS[method];
@@ -506,12 +548,11 @@ class Analyzer {
     let down: TSNode | null = receiverNode;
     const downChain: ChainLink[] = [];
     while (down && this.spec.call.includes(down.type)) {
-      const f = down.childForFieldName('function');
-      const fm = f ? this.spec.member[f.type] : undefined;
-      if (!f || !fm) break;
+      const dci = this.callInfo(down);
+      if (!dci || !dci.receiver) break;
       if (!quick && this.classify(down, true)) return null;
-      downChain.push({ name: f.childForFieldName(fm[1])?.text ?? '', args: down.childForFieldName('arguments')?.text ?? '', node: down });
-      down = f.childForFieldName(fm[0]);
+      downChain.push({ name: dci.method, args: dci.args?.text ?? '', node: down });
+      down = dci.receiver;
     }
     if (quick) return { node, top: node, method, kind: def.kind, db: 'unknown', receiver, receiverText: '', args, argsText: '', chain: [], confidence: 'low' };
 
@@ -519,14 +560,10 @@ class Analyzer {
     const up: ChainLink[] = [];
     let top = node;
     for (;;) {
-      const p = top.parent;
-      const pm = p ? this.spec.member[p.type] : undefined;
-      if (!p || !pm || !same(p.childForFieldName(pm[0]), top)) break;
-      const pp = p.parent;
-      if (!pp || !this.spec.call.includes(pp.type) || !same(pp.childForFieldName('function'), p)) {
-        break;
-      }
-      up.push({ name: p.childForFieldName(pm[1])?.text ?? '', args: pp.childForFieldName('arguments')?.text ?? '', node: pp });
+      const pp = this.parentCall(top);
+      const pci = pp ? this.callInfo(pp) : null;
+      if (!pp || !pci) break;
+      up.push({ name: pci.method, args: pci.args?.text ?? '', node: pp });
       top = pp;
     }
 
@@ -541,7 +578,7 @@ class Analyzer {
     if (def.kind === 'raw') db = 'sql';
 
     const confidence: Confidence = def.hint === 'none' || sqlArg ? 'high' : hinted ? 'medium' : 'low';
-    const argsNode = node.childForFieldName('arguments');
+    const argsNode = ci.args;
     return {
       node, top, method, kind: def.kind, db, orm: def.orm ?? (this.hasMongoose && db === 'mongodb' && this.isJs ? 'mongoose' : undefined),
       receiver, receiverText: receiverNode.text, collection: this.collectionName(receiverNode), args, argsText: argsNode?.text ?? '',
@@ -551,7 +588,7 @@ class Analyzer {
 
   // ------------------------------------------------------------- rules
 
-  private evaluate(q: QueryCall, ctx: Ctx): void {
+  evaluate(q: QueryCall, ctx: Ctx): void {
     this.trackAssignment(q);
     this.recordShape(q, ctx);
     const target = q.collection ? `${q.collection}.${q.method}` : `${q.receiver}.${q.method}`;
@@ -585,9 +622,11 @@ class Analyzer {
 
     if (q.db === 'mongodb') this.mongoRules(q);
     if (q.db === 'sql') this.sqlOrmRules(q);
+    if (q.db === 'sql' && q.kind !== 'write' && q.kind !== 'batchWrite') this.sqlExistenceRules(q);
+    this.plugin?.extraRules?.(q, ctx, this);
   }
 
-  private recordShape(q: QueryCall, ctx: Ctx): void {
+  recordShape(q: QueryCall, ctx: Ctx): void {
     const id = `${this.opts.relPath}:${q.node.startPosition.row + 1}:${q.node.startPosition.column + 1}`;
     q.shapeId = id;
     let filterKeys = this.shapeFilterKeys(q);
@@ -609,7 +648,9 @@ class Analyzer {
     });
   }
 
-  private shapeFilterKeys(q: QueryCall): string[] {
+  shapeFilterKeys(q: QueryCall): string[] {
+    const pk = this.plugin?.filterKeys?.(q, this);
+    if (pk) return pk;
     const clean = (k: string) => k.split('__')[0];
     // Prisma: { where: { ... } }
     if (q.orm === 'prisma' && q.args[0]?.type === 'object') {
@@ -632,7 +673,7 @@ class Analyzer {
   }
 
   /** Sort keys from .sort({ a: -1 }), .sort("a", -1), sort=[("a", -1)], SetSort(bson.D{{"a", -1}}), order_by("-a"). */
-  private sortKeys(q: QueryCall): SortKey[] {
+  sortKeys(q: QueryCall): SortKey[] {
     const out: SortKey[] = [];
     const dirOf = (v?: string): 1 | -1 => (v && /^(-1|['"]?desc(ending)?['"]?|pymongo\.DESCENDING|DESCENDING)$/i.test(v.trim()) ? -1 : 1);
     const links = q.chain.filter((c) => /^(sort|Sort|order_by|orderBy|Order)$/.test(c.name)).map((c) => c.args);
@@ -658,7 +699,7 @@ class Analyzer {
   }
 
   /** `collections.map(c => c.deleteMany({}))` hits a different collection each time: not N+1. */
-  private targetVariesPerIteration(q: QueryCall, ctx: Ctx): boolean {
+  targetVariesPerIteration(q: QueryCall, ctx: Ctx): boolean {
     const vars = ctx.loopVars ?? [];
     if (!vars.length) return false;
     const COLLECTIONISH = /(collection|coll\b|model|table|schema|repo|index|db\b|database|tenant|shard)/i;
@@ -672,7 +713,9 @@ class Analyzer {
     return false;
   }
 
-  private batchFix(q: QueryCall): string | undefined {
+  batchFix(q: QueryCall): string | undefined {
+    const pf = this.plugin?.batchFix?.(q);
+    if (pf) return pf;
     if (q.db === 'mongodb') {
       const keys = this.filterKeys(q);
       const k = keys[0] ?? '_id';
@@ -685,7 +728,7 @@ class Analyzer {
     return undefined;
   }
 
-  private trackAssignment(q: QueryCall): void {
+  trackAssignment(q: QueryCall): void {
     let n: TSNode | null = q.top.parent;
     for (let i = 0; n && i < 4; i++) {
       if (['await_expression', 'parenthesized_expression', 'as_expression', 'non_null_expression', 'expression_list', 'await'].includes(n.type)) {
@@ -695,8 +738,8 @@ class Analyzer {
       break;
     }
     if (!n) return;
-    let target: TSNode | null = null;
-    if (n.type === 'variable_declarator') target = n.childForFieldName('name');
+    let target: TSNode | null = this.plugin?.assignTarget?.(q.top) ?? null;
+    if (target) { /* plugin decided */ } else if (n.type === 'variable_declarator') target = n.childForFieldName('name');
     else if (n.type === 'assignment_expression' || n.type === 'assignment' || n.type === 'augmented_assignment') target = n.childForFieldName('left');
     else if (n.type === 'short_var_declaration' || n.type === 'assignment_statement') target = n.childForFieldName('left');
     if (!target) return;
@@ -704,17 +747,17 @@ class Analyzer {
     if (name) this.queryVars.add(name[0]);
   }
 
-  private filterNode(q: QueryCall): TSNode | undefined {
+  filterNode(q: QueryCall): TSNode | undefined {
     if (this.spec.id === 'go') return q.args[1];
     return q.args[0];
   }
 
-  private filterKeys(q: QueryCall): string[] {
+  filterKeys(q: QueryCall): string[] {
     const f = this.filterNode(q);
     return f ? this.objectKeys(f) : [];
   }
 
-  private objectKeys(node: TSNode): string[] {
+  objectKeys(node: TSNode): string[] {
     const keys: string[] = [];
     const push = (k?: string | null) => {
       if (!k) return;
@@ -734,17 +777,17 @@ class Analyzer {
     return keys;
   }
 
-  private isEmptyFilter(node: TSNode | undefined): boolean {
+  isEmptyFilter(node: TSNode | undefined): boolean {
     if (!node) return true;
     const t = node.text.replace(/\s+/g, '');
     return /^(\{\}|bson\.(M|D)\{\}|primitive\.(M|D)\{\}|dict\(\)|map\[string\](interface\{\}|any)\{\})$/.test(t);
   }
 
-  private chainHas(q: QueryCall, re: RegExp): boolean {
+  chainHas(q: QueryCall, re: RegExp): boolean {
     return q.chain.some((c) => re.test(c.name));
   }
 
-  private mongoRules(q: QueryCall): void {
+  mongoRules(q: QueryCall): void {
     const filter = this.filterNode(q);
     const allText = q.argsText + ' ' + q.chain.map((c) => `${c.name}${c.args}`).join(' ');
     const hasLimit = this.chainHas(q, /^(limit|Limit|first|next|batch_size)$/) || /\b(limit|SetLimit|\$limit)\b/.test(q.argsText);
@@ -820,8 +863,10 @@ class Analyzer {
     }
 
     // count for existence
-    if (q.kind === 'count' && q.method !== 'exists' && this.usedAsBoolean(q.top)) {
-      this.add('MQ008', q.node, q, { message: `\`${q.method}()\` result is only compared against 0.` });
+    // count for existence (a count already limited to 1 is a cheap existence check)
+    const goZero = this.spec.id === 'go' && q.kind === 'count' && this.countVarZeroOnly(q);
+    if (q.kind === 'count' && q.method !== 'exists' && !hasLimit && (this.usedAsBoolean(q.top) || goZero)) {
+      this.add('MQ008', q.node, q, { message: `\`${q.method}()\` result is only compared against 0.`, autofix: this.mongoCountFix(q, goZero) });
     }
 
     // aggregation pipeline order
@@ -852,7 +897,7 @@ class Analyzer {
    * Returns undefined when the file mutates documents (save, toObject, markModified...), because
    * lean() returns plain objects and those calls would break.
    */
-  private leanFix(q: QueryCall): Finding['autofix'] {
+  leanFix(q: QueryCall): Finding['autofix'] {
     if (/\.(save|toObject|toJSON|markModified|isModified|depopulate|validate|increment|\$set|\$inc|ownerDocument|\$isDeleted)\s*\(/.test(this.src)) return undefined;
     const TERMINAL = /^(exec|then|catch|finally|cursor|stream|eachAsync|countDocuments|count|explain|toArray|session|orFail)$/;
     let at = q.node;
@@ -868,7 +913,127 @@ class Analyzer {
     return { offset: at.endIndex, insert: '.lean()', description: 'append .lean()' };
   }
 
-  private regexIssue(q: QueryCall): string | null {
+  /**
+   * MQ008 autofix: cap the count at 1 so the server stops at the first match. Only when the result is
+   * used purely as a 0 / non-0 test, so the outcome cannot change. Plugins supply theirs via add().
+   */
+  mongoCountFix(q: QueryCall, goZero: boolean): Autofix | undefined {
+    if (this.plugin) return undefined;
+    const last = q.args[q.args.length - 1];
+    const description = 'limit the count to 1 (it is only compared with 0)';
+    if (this.spec.id === 'go') {
+      // only when the options package is already imported unaliased, and no options are passed yet
+      if (!goZero || q.method !== 'CountDocuments' || q.args.length !== 2 || q.argsText.includes('...')) return undefined;
+      if (!/^\s*(import\s+)?"go\.mongodb\.org\/mongo-driver(\/v2)?\/mongo\/options"/m.test(this.src)) return undefined;
+      return { offset: last.endIndex, insert: ', options.Count().SetLimit(1)', description };
+    }
+    if (!this.existenceUse(q.top)) return undefined;
+    if (this.spec.id === 'python') {
+      if (q.method !== 'count_documents' || !last || q.args.some((a) => /splat/.test(a.type))) return undefined;
+      return { offset: last.endIndex, insert: ', limit=1', description };
+    }
+    if (!this.isJs || q.method !== 'countDocuments' || q.args.length > 1 || q.args.some((a) => a.type === 'spread_element')) return undefined;
+    const native = /collection/i.test(q.receiverText);
+    const modelLike = /^[A-Z]/.test(q.receiver.replace(/^this\./, '')) || /model$/i.test(q.receiver);
+    // Mongoose: Query#limit is passed through to countDocuments; older Model.countDocuments(filter, cb) has no options arg
+    if (!native && modelLike) return q.orm === 'mongoose' ? { offset: q.node.endIndex, insert: '.limit(1)', description } : undefined;
+    if (!native && this.hasMongoose) return undefined;
+    // Node driver: countDocuments(filter, { limit })
+    if (last) return { offset: last.endIndex, insert: ', { limit: 1 }', description };
+    const args = this.callInfo(q.node)?.args;
+    return args ? { offset: args.endIndex - 1, insert: '{}, { limit: 1 }', description } : undefined;
+  }
+
+  /**
+   * How `expr` is used when it is only a "does at least one exist" test: as a condition, negated, or
+   * compared with 0 / 1 (`> 0`, `!= 0`, `>= 1`, `== 0`, `< 1`, ...). `node` is what to rewrite (the
+   * comparison when `cmp`, else `expr`); `none` is true when the test is for "no rows".
+   */
+  existenceUse(expr: TSNode): { node: TSNode; cmp: boolean; none: boolean } | null {
+    let w = expr;
+    while (w.parent && ['await_expression', 'parenthesized_expression', 'await'].includes(w.parent.type)) w = w.parent;
+    const p = w.parent;
+    if (!p) return null;
+    if (p.type === 'binary_expression' || p.type === 'comparison_operator') {
+      const ops = p.namedChildren.filter((c) => c.type !== 'comment');
+      if (ops.length !== 2) return null;
+      const mine = same(ops[0], w) ? 0 : same(ops[1], w) ? 1 : -1;
+      if (mine < 0) return null;
+      const o = this.src.slice(ops[0].endIndex, ops[1].startIndex).trim();
+      const other = ops[1 - mine].text.trim();
+      const key = mine === 0 ? `x${o}${other}` : `${other}${o}x`;
+      if (['x>0', 'x!=0', 'x!==0', 'x>=1', '0<x', '0!=x', '0!==x', '1<=x'].includes(key)) return { node: p, cmp: true, none: false };
+      if (['x==0', 'x===0', 'x<1', 'x<=0', '0==x', '0===x', '1>x', '0>=x'].includes(key)) return { node: p, cmp: true, none: true };
+      return null;
+    }
+    const cond = p.type === 'conditional_expression' ? p.namedChildren[1] : p.childForFieldName('condition');
+    if (['if_statement', 'elif_clause', 'while_statement', 'ternary_expression', 'conditional_expression'].includes(p.type) && same(cond, w)) return { node: expr, cmp: false, none: false };
+    if (p.type === 'not_operator' || (p.type === 'unary_expression' && p.text.trim().startsWith('!'))) return { node: expr, cmp: false, none: true };
+    return null;
+  }
+
+  /** Go: `n, err := c.CountDocuments(...)` or `.Count(&n)`, where every later use of `n` in the function is a 0 / non-0 test. */
+  countVarZeroOnly(q: QueryCall): boolean {
+    let name: string | undefined;
+    if (q.method === 'Count') name = q.args.length === 1 ? /^&([A-Za-z_]\w*)$/.exec(q.args[0].text)?.[1] : undefined;
+    else {
+      const decl = q.top.parent?.type === 'expression_list' ? q.top.parent.parent : null;
+      if (decl && /^(short_var_declaration|assignment_statement)$/.test(decl.type)) name = decl.childForFieldName('left')?.namedChildren[0]?.text;
+    }
+    if (!name || name === '_') return false;
+    let fn = q.top.parent;
+    while (fn && !this.spec.functions.includes(fn.type)) fn = fn.parent;
+    const rest = this.src.slice(q.top.endIndex, fn ? fn.endIndex : this.src.length);
+    const uses = rest.match(new RegExp(`(?<![\\w.])${name}\\b`, 'g'))?.length ?? 0;
+    const zero = rest.match(new RegExp(`(?<![\\w.])${name}\\s*(?:(?:>|!=|==)\\s*0|>=\\s*1|<\\s*1)(?![\\w.])|\\b(?:0\\s*(?:<|!=|==)|1\\s*<=)\\s*${name}\\b`, 'g'))?.length ?? 0;
+    return uses > 0 && uses === zero;
+  }
+
+  /** SQ009: an ORM count() whose result is only tested against 0 (JS/TS, Python, Go; plugins have their own). */
+  sqlExistenceRules(q: QueryCall): void {
+    if (this.plugin) return;
+    if (this.spec.id === 'go') {
+      if (q.method === 'Count' && this.countVarZeroOnly(q)) {
+        this.add('SQ009', q.node, q, { message: '`Count(&n)` is only compared against 0.', fix: 'Use `.Select("1").Limit(1).Find(&rows)` and check RowsAffected, or SELECT EXISTS(...).' });
+      }
+      return;
+    }
+    if (this.isJs) {
+      if (!/^(count|countBy)$/.test(q.method) || !this.existenceUse(q.top)) return;
+      const fix = /prisma/i.test(q.receiver) ? 'Use `findFirst({ where, select: { id: true } })` and check for null.'
+        : /repo|repository|manager|\bem\b/i.test(q.receiver) || q.orm === 'typeorm' ? 'Use `exists({ where })` / `existsBy(where)` (TypeORM 0.3) or `findOne({ where, select: { id: true } })`.'
+        : 'Use `findOne({ where, attributes: ["id"] })` and check for null.';
+      this.add('SQ009', q.node, q, { message: `\`${q.receiver}.${q.method}()\` result is only compared against 0.`, fix });
+      return;
+    }
+    // Python: qs.count() / len(qs) on a Django queryset, query.count() in SQLAlchemy
+    const top = this.callInfo(q.top);
+    let expr: TSNode | null = null;
+    let qs: TSNode | null = null;
+    if (top?.method === 'count' && top.receiver && !this.argNodes(q.top).length) [expr, qs] = [q.top, top.receiver];
+    else if (q.orm === 'django' && q.kind === 'readMany' && q.top.parent?.type === 'argument_list' && q.top.parent.namedChildren.length === 1
+      && q.top.parent.parent?.childForFieldName('function')?.text === 'len') [expr, qs] = [q.top.parent.parent, q.top];
+    const use = expr ? this.existenceUse(expr) : null;
+    if (!expr || !qs || !use) return;
+    const fixable = q.orm === 'django' && !this.chainHas(q, /^(annotate|union|intersection|difference|raw|extra)$/);
+    this.add('SQ009', q.node, q, {
+      message: `\`${expr.text.replace(/\s+/g, ' ').slice(0, 60)}\` is only compared against 0.`,
+      fix: q.orm === 'sqlalchemy' ? 'Use `session.query(query.exists()).scalar()` or `query.first() is not None`.' : undefined,
+      autofix: fixable ? this.djangoExistsFix(expr, qs, use) : undefined,
+    });
+  }
+
+  /** `qs.count() > 0` / `len(qs) > 0` -> `qs.exists()`, `qs.count() == 0` -> `not qs.exists()`, `if qs.count():` -> `if qs.exists():`. */
+  djangoExistsFix(expr: TSNode, qs: TSNode, use: { node: TSNode; cmp: boolean; none: boolean }): Autofix {
+    const recv = this.src.slice(qs.startIndex, qs.endIndex);
+    let insert = use.cmp && use.none ? `not ${recv}.exists()` : `${recv}.exists()`;
+    const SAFE = /^(if_statement|elif_clause|while_statement|parenthesized_expression|expression_statement|return_statement|assignment|boolean_operator|assert_statement|argument_list|keyword_argument)$/;
+    if (use.cmp && use.none && !SAFE.test(use.node.parent?.type ?? '')) insert = `(${insert})`;
+    const n = use.cmp ? use.node : expr;
+    return { offset: n.startIndex, deleteLength: n.endIndex - n.startIndex, insert, description: 'use .exists() instead of counting rows' };
+  }
+
+  regexIssue(q: QueryCall): string | null {
     const text = q.argsText;
     // JS regex literals
     for (const a of q.args) {
@@ -902,7 +1067,7 @@ class Analyzer {
     return null;
   }
 
-  private pipelineStages(node: TSNode): string[] | null {
+  pipelineStages(node: TSNode): string[] | null {
     let elems: TSNode[] = [];
     if (node.type === 'array' || node.type === 'list') elems = node.namedChildren;
     else if (node.type === 'composite_literal') elems = node.childForFieldName('body')?.namedChildren ?? [];
@@ -917,7 +1082,7 @@ class Analyzer {
     return stages.length ? stages : null;
   }
 
-  private usedAsBoolean(top: TSNode): boolean {
+  usedAsBoolean(top: TSNode): boolean {
     let n: TSNode | null = top.parent;
     while (n && ['await_expression', 'parenthesized_expression', 'await'].includes(n.type)) n = n.parent;
     if (!n) return false;
@@ -930,14 +1095,16 @@ class Analyzer {
     return false;
   }
 
-  private sqlOrmRules(q: QueryCall): void {
+  sqlOrmRules(q: QueryCall): void {
     if (q.kind !== 'readMany') return;
     const hasWhere = this.chainHas(q, /^(where|Where|filter|filter_by|exclude|get|Joins)$/)
       || q.args.some((a) => /\b(where|take|limit|first|cursor)\b/.test(a.text));
     const hasLimit = this.chainHas(q, /^(limit|Limit|take|first|one|one_or_none|scalar|paginate|get)$/)
       || q.top.parent?.type === 'subscript' || q.top.parent?.type === 'slice';
     let unbounded = false;
-    if (q.orm === 'django') unbounded = q.method === 'all' && !hasLimit;
+    const pu = this.plugin?.unbounded?.(q, this);
+    if (pu !== undefined) unbounded = pu;
+    else if (q.orm === 'django') unbounded = q.method === 'all' && !hasLimit;
     else if (q.orm === 'sqlalchemy') unbounded = q.method === 'query' && !hasWhere && !hasLimit && this.chainHas(q, /^all$/);
     else if (q.orm === 'gorm') unbounded = q.chain.length === 0 && /^[a-z]\w*$/.test(q.receiver) && q.args.length <= 1;
     else if (this.isJs && ['findMany', 'findAll', 'find', 'findBy', 'findAndCount', 'getMany'].includes(q.method)) {
@@ -956,7 +1123,7 @@ class Analyzer {
 
   // ------------------------------------------------------------- raw SQL strings
 
-  private checkSqlString(node: TSNode): void {
+  checkSqlString(node: TSNode): void {
     let txt = node.text;
     const dynamic = node.type === 'template_string' && /\$\{/.test(txt) || node.namedChildren.some((c) => c.type === 'interpolation');
     if (node.type === 'template_string') txt = txt.replace(/\$\{[^}]*\}/g, '?');
@@ -1000,7 +1167,7 @@ class Analyzer {
 
   // ------------------------------------------------------------- output
 
-  private add(ruleId: string, node: TSNode, q: QueryCall, o: { severity?: Severity; message: string; fix?: string; confidence?: Confidence; autofix?: Finding['autofix'] }): void {
+  add(ruleId: string, node: TSNode, q: QueryCall, o: { severity?: Severity; message: string; fix?: string; confidence?: Confidence; autofix?: Autofix }): void {
     const rule = RULE_MAP.get(ruleId)!;
     const line = node.startPosition.row + 1;
     const endRow = Math.min(node.endPosition.row, node.startPosition.row + 2);
@@ -1008,6 +1175,8 @@ class Analyzer {
     const norm = snippet.replace(/\s+/g, ' ');
     const fingerprint = createHash('sha1').update(`${ruleId}|${this.opts.relPath}|${norm}`).digest('hex').slice(0, 16);
     if (this.findings.some((f) => f.ruleId === ruleId && f.line === line && f.column === node.startPosition.column + 1)) return;
+    // language plugins (Java, Ruby, PHP) can supply the autofix for the shared existence / iteration rules
+    const autofix = o.autofix ?? (/^(MQ008|SQ009|SQ010)$/.test(ruleId) ? this.plugin?.autofix?.(ruleId, q, this) : undefined);
     this.findings.push({
       ruleId,
       title: rule.title,
@@ -1023,11 +1192,11 @@ class Analyzer {
       confidence: o.confidence ?? q.confidence,
       fingerprint,
       ...(q.shapeId ? { shapeId: q.shapeId } : {}),
-      ...(o.autofix ? { autofix: o.autofix } : {}),
+      ...(autofix ? { autofix } : {}),
     });
   }
 
-  private applySuppressions(): Finding[] {
+  applySuppressions(): Finding[] {
     const re = /querydig-ignore(?!-file)(?:[\s:]+((?:[A-Z]{2}\d{3}[\s,]*)+))?/;
     return this.findings.filter((f) => {
       for (const ln of [f.line, f.line - 1]) {

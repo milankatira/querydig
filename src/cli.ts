@@ -46,7 +46,7 @@ program
   .option('--explain-execute', 'run explain with execution stats (executes queries; use a replica)', false)
   .option('--max-explain <n>', 'maximum number of query shapes to explain', '200')
   .option('--live-required', 'fail (exit 2) if the live database cannot be reached', false)
-  .option('--fix', 'apply safe automatic fixes (currently: add .lean() to read-only Mongoose queries)', false)
+  .option('--fix', 'apply safe automatic fixes (.lean() on read-only Mongoose queries, limit 1 on existence counts, Django .exists())', false)
   .option('--dry-run', 'with --fix: show the changes without writing files', false)
   .option('--emit-indexes [file]', 'with --uri: write every suggested index to a reviewed script (.js for MongoDB, .sql for Postgres)')
   .action(async (path: string, o) => {
@@ -105,13 +105,14 @@ program
       const res = applyFixes(root, summary.findings, { dryRun: o.dryRun });
       const verb = o.dryRun ? 'would change' : 'changed';
       if (!res.changes.length) {
-        console.error(pc.dim('querydig --fix: nothing to fix automatically. Only safe, mechanical edits are applied (.lean() on read-only Mongoose queries); everything else needs review.'));
+        console.error(pc.dim('querydig --fix: nothing to fix automatically. Only safe, mechanical edits are applied (.lean() on read-only Mongoose queries, limit 1 on counts compared with 0, Django .exists()); everything else needs review.'));
       } else {
         console.error(pc.bold(`querydig --fix: ${verb} ${res.changes.length} line(s) in ${res.files.length} file(s)${o.dryRun ? ' (dry run, no files written)' : ''}`));
         for (const c of res.changes) {
           console.error(`  ${pc.underline(`${c.file}:${c.line}`)}  ${pc.dim(c.ruleId)} ${c.description}`);
-          console.error(pc.red(`  - ${c.before}`));
-          console.error(pc.green(`  + ${c.after}`));
+          // a replacement can span several lines: prefix every line of the before/after text
+          for (const l of c.before.split('\n')) console.error(pc.red(`  - ${l}`));
+          for (const l of c.after.split('\n')) console.error(pc.green(`  + ${l}`));
         }
         if (!o.dryRun) {
           const fixed = new Set(res.applied);

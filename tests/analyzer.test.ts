@@ -193,3 +193,52 @@ describe('regressions', () => {
     expect(await ids('from django.db import models\nfor MC in Metric.__subclasses__():\n    MC.objects.get(slug=s)\n', 'python')).toEqual([]);
   });
 });
+
+describe('SQ009 — COUNT used as an existence check', () => {
+  const DJ = 'from django.db import models\n';
+  const PRISMA = "import { PrismaClient } from '@prisma/client';\n";
+
+  it('Django count() / len() compared with 0, as a condition, or negated', async () => {
+    for (const line of ['if Order.objects.filter(a=1).count() > 0:\n    pass', 'x = Order.objects.count() == 0', 'if u.order_set.count():\n    pass',
+      'x = not Order.objects.all().count()', 'x = len(Order.objects.filter(a=1)) != 0', 'x = 1 <= Order.objects.filter(a=1).count()']) {
+      expect(await ids(DJ + line + '\n', 'python'), line).toContain('SQ009');
+    }
+  });
+
+  it('Django: not when the number itself is used', async () => {
+    for (const line of ['n = Order.objects.filter(a=1).count()', 'if Order.objects.filter(a=1).count() > 5:\n    pass', 'x = Order.objects.count() == 1',
+      'if qs.count() > 0:\n    pass', 'if Order.objects.filter(a=1).exists():\n    pass', 'x = len(Order.objects.filter(a=1)) > 2']) {
+      expect(await ids(DJ + line + '\n', 'python'), line).not.toContain('SQ009');
+    }
+  });
+
+  it('SQLAlchemy query.count() > 0 (detection only)', async () => {
+    const f = await run('from sqlalchemy.orm import Session\nif session.query(User).filter(User.a == 1).count() > 0:\n    pass\n', 'python');
+    const s = f.find((x) => x.ruleId === 'SQ009');
+    expect(s).toBeDefined();
+    expect(s!.autofix).toBeUndefined();
+  });
+
+  it('Prisma / Sequelize / TypeORM count() used as a boolean (detection only)', async () => {
+    const f = await run(PRISMA + 'export async function a() {\n  if ((await prisma.user.count({ where: { a: 1 } })) > 0) return 1;\n  if (!(await prisma.post.count())) return 2;\n  return (await userRepository.countBy({ a: 1 })) !== 0;\n}\n');
+    const s = f.filter((x) => x.ruleId === 'SQ009');
+    expect(s.map((x) => x.line)).toEqual([3, 4, 5]);
+    expect(s.every((x) => !x.autofix)).toBe(true);
+    expect(s[0].fix).toContain('findFirst');
+    expect(await ids("import { Sequelize } from 'sequelize';\nconst has = (await User.count({ where: { a: 1 } })) > 0;\n")).toContain('SQ009');
+  });
+
+  it('JS: not when the count is returned or compared with another number', async () => {
+    expect(await ids(PRISMA + 'const n = await prisma.user.count({ where: { a: 1 } });\nconst m = (await prisma.user.count()) > 10;\n')).not.toContain('SQ009');
+  });
+
+  it('GORM Count(&n) only when n is just tested against 0', async () => {
+    const head = 'package x\nimport "gorm.io/gorm"\n';
+    expect(await ids(head + 'func f() bool {\n  var n int64\n  db.Model(&User{}).Where("a = ?", 1).Count(&n)\n  return n > 0\n}\n', 'go')).toContain('SQ009');
+    expect(await ids(head + 'func f() int64 {\n  var n int64\n  db.Model(&User{}).Where("a = ?", 1).Count(&n)\n  if n > 0 { log(n) }\n  return n\n}\n', 'go')).not.toContain('SQ009');
+  });
+
+  it('does not emit SQ009 for MongoDB counts (that is MQ008)', async () => {
+    expect(await ids(MONGOOSE + 'if ((await O.countDocuments({ a: 1 })) > 0) {}')).not.toContain('SQ009');
+  });
+});

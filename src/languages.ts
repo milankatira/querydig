@@ -1,3 +1,4 @@
+import { PLUGINS } from './langs/index.js';
 import type { LangId } from './types.js';
 
 export interface LangSpec {
@@ -27,7 +28,7 @@ const JS_BASE = {
   iterMethods: ['map', 'forEach', 'flatMap', 'reduce', 'filter', 'some', 'every', 'each', 'mapSeries', 'eachSeries', 'mapLimit', 'eachLimit', 'forEachOf', 'times'],
 };
 
-export const LANGS: Record<LangId, LangSpec> = {
+export const LANGS = {
   javascript: { id: 'javascript', grammar: 'tree-sitter-javascript.wasm', ...JS_BASE },
   typescript: { id: 'typescript', grammar: 'tree-sitter-typescript.wasm', ...JS_BASE },
   tsx: { id: 'tsx', grammar: 'tree-sitter-tsx.wasm', ...JS_BASE },
@@ -53,13 +54,15 @@ export const LANGS: Record<LangId, LangSpec> = {
     strings: ['interpreted_string_literal', 'raw_string_literal'],
     iterMethods: [],
   },
-};
+  ...(Object.fromEntries(Object.entries(PLUGINS).map(([id, p]) => [id, p!.spec])) as Partial<Record<LangId, LangSpec>>),
+} as Record<LangId, LangSpec>;
 
 const EXT: Record<string, LangId> = {
   '.js': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript', '.jsx': 'tsx',
   '.ts': 'typescript', '.mts': 'typescript', '.cts': 'typescript', '.tsx': 'tsx',
   '.py': 'python',
   '.go': 'go',
+  ...Object.fromEntries(Object.entries(PLUGINS).flatMap(([id, p]) => p!.extensions.map((e) => [e, id as LangId]))),
 };
 
 export function langForFile(file: string): LangId | undefined {
