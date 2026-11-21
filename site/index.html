@@ -327,10 +327,86 @@ p code, li code, .lede code { font-size: .88em; padding: 1px 5px; border-radius:
 .rule .meta { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
 @media (max-width: 640px) { .rule { grid-template-columns: 1fr; gap: 8px; } .rule .meta { justify-content: flex-start; } }
 
-.new-badge { display: inline-block; margin-left: 8px; padding: 3px 9px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 11px; letter-spacing: .02em; text-transform: none; vertical-align: 1px; }
-.mcp-note { margin: 14px 4px 0; color: var(--fg-55); font-size: 14px; line-height: 1.6; }
-.mcp-note code, #mcp .lede code { font-size: .9em; padding: 2px 6px; border-radius: 6px; background: var(--fg-5); }
-#mcp .lede a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+/* ---------- MCP ---------- */
+.new-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 11px; letter-spacing: .02em; text-transform: none; }
+.mcp { overflow: hidden; }
+.mcp-glow { position: absolute; inset: -10% -20% auto; height: 620px; pointer-events: none; opacity: .9;
+  background: radial-gradient(40% 50% at 30% 30%, rgb(217 119 87 / .14), transparent 70%), radial-gradient(40% 50% at 72% 35%, rgb(124 108 255 / .16), transparent 70%); filter: blur(10px); }
+.mcp .head { position: relative; }
+.mcp .head .h2 { max-width: 820px; margin-left: auto; margin-right: auto; }
+.mcp .lede code, .mcp-env code, .mcp-foot code, .mcp-demo-copy p code { font-size: .88em; padding: 2px 6px; border-radius: 6px; background: var(--fg-5); }
+.mcp .lede a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--fg-25); }
+.mcp-works { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; margin-top: 28px; }
+.mcp-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px 7px 10px; border-radius: 999px; border: 1px solid var(--fg-8); background: var(--fg-3); color: var(--fg-65); font: 500 13px/1 var(--font-sans); }
+.mcp-chip svg { width: 15px; height: 15px; fill: currentColor; }
+.lg-claude { fill: #d97757 !important; }
+
+.mcp-shell { position: relative; margin-top: 48px; display: grid; gap: 20px; padding: 14px; border-radius: 28px; border: 1px solid var(--fg-8);
+  background: linear-gradient(180deg, var(--fg-3), transparent 60%), var(--surface); box-shadow: var(--shadow); }
+html.dark .mcp-shell { background: linear-gradient(180deg, rgb(255 255 255 / .035), rgb(255 255 255 / .01)); }
+@media (min-width: 900px) { .mcp-shell { grid-template-columns: 300px 1fr; padding: 18px; gap: 24px; } }
+.mcp-label { margin: 6px 6px 12px; font: 500 11px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--fg-45); }
+.mcp-clients { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 900px) { .mcp-clients { grid-template-columns: 1fr; gap: 4px; } }
+.mcp-client { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; border: 1px solid transparent; border-radius: 14px; background: transparent;
+  color: var(--fg); text-align: left; cursor: pointer; font: inherit; transition: background .25s, border-color .25s, transform .25s; }
+.mcp-client:hover { background: var(--fg-5); }
+.mcp-client[aria-selected="true"] { background: var(--bg); border-color: var(--fg-10); box-shadow: 0 8px 24px -16px rgb(0 0 0 / .5); }
+html.dark .mcp-client[aria-selected="true"] { background: rgb(255 255 255 / .06); }
+.mcp-logo { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--fg-8); background: var(--fg-3); transition: transform .3s; }
+.mcp-client[aria-selected="true"] .mcp-logo { transform: scale(1.06); background: var(--surface); }
+.mcp-logo svg { width: 19px; height: 19px; fill: var(--fg); }
+.mcp-cname { display: grid; min-width: 0; font: 600 14px/1.25 var(--font-display); }
+.mcp-cname small { font: 400 12px/1.4 var(--font-sans); color: var(--fg-45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 420px) { .mcp-cname small { display: none; } .mcp-client { padding: 8px; gap: 10px; } }
+
+.mcp-main { min-width: 0; display: flex; flex-direction: column; }
+.mcp-panel[hidden] { display: none; }
+.mcp-panel { animation: mcpIn .35s cubic-bezier(.2,.7,.2,1); }
+@keyframes mcpIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.mcp-win { border-radius: 18px; }
+.mcp-win pre { min-height: 236px; padding: 20px 22px 24px; }
+.mcp-bar { display: flex; align-items: center; gap: 7px; padding: 13px 16px; border-bottom: 1px solid rgb(255 255 255 / .07); background: rgb(255 255 255 / .025); }
+.mcp-bar i { width: 10px; height: 10px; border-radius: 50%; background: rgb(255 255 255 / .14); }
+.mcp-bar span { margin-left: 8px; font: 500 12px/1 var(--font-mono); color: rgb(255 255 255 / .5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 72px; }
+.mcp-win .copy-code { top: 8px; right: 10px; }
+.mcp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin: 14px 6px 0; }
+.mcp-foot p { margin: 0; flex: 1 1 260px; color: var(--fg-55); font-size: 14px; line-height: 1.6; }
+.mcp-install { gap: 9px; }
+.mcp-install-logo svg { width: 15px; height: 15px; fill: currentColor; }
+.mcp-env { margin: auto 6px 4px; padding-top: 18px; color: var(--fg-55); font-size: 13.5px; line-height: 1.6; border-top: 1px dashed var(--fg-10); }
+.mcp-env b { color: var(--fg); font-weight: 600; }
+
+.mcp-flow { list-style: none; margin: 56px 0 0; padding: 0; display: grid; gap: 14px; counter-reset: s; }
+@media (min-width: 720px) { .mcp-flow { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .mcp-flow { grid-template-columns: repeat(4, 1fr); } }
+.mcp-step { position: relative; padding: 22px; border-radius: 20px; border: 1px solid var(--fg-8); background: var(--fg-3); }
+@media (min-width: 1000px) { .mcp-step:not(:last-child)::after { content: ""; position: absolute; top: 34px; right: -12px; width: 10px; height: 1px; background: var(--fg-25); } }
+.mcp-num { font: 500 12px/1 var(--font-mono); color: var(--fg-45); letter-spacing: .1em; }
+.mcp-step h3 { margin: 14px 0 0; font: 600 20px/1.2 var(--font-display); letter-spacing: -0.01em; }
+.mcp-step p { margin: 8px 0 0; color: var(--fg-55); font-size: 14.5px; line-height: 1.6; }
+.mcp-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.mcp-tools code { font-size: 11.5px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--fg-10); background: var(--bg); color: var(--fg-80); }
+
+.mcp-demo { margin-top: 64px; display: grid; gap: 32px; align-items: center; }
+@media (min-width: 980px) { .mcp-demo { grid-template-columns: 1fr 1.1fr; gap: 56px; } }
+.mcp-h3 { margin: 16px 0 0; font: 600 clamp(26px, 3.4vw, 36px)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.mcp-demo-copy p { margin: 14px 0 0; color: var(--fg-55); font-size: 16px; line-height: 1.7; }
+.mcp-cmd { margin-top: 24px; max-width: 100%; }
+.mcp-cmd > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcp-chat { border-radius: 20px; overflow: hidden; background: var(--code-bg); color: var(--code-fg); border: 1px solid rgb(255 255 255 / .08); box-shadow: var(--shadow); }
+.mcp-msgs { display: grid; gap: 8px; padding: 18px; font-size: 13.5px; line-height: 1.55; }
+.msg { max-width: 92%; }
+.msg.you { justify-self: end; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: rgb(255 255 255 / .1); }
+.msg.ai { padding: 4px 2px; color: rgb(255 255 255 / .88); }
+.msg.ai code { font-size: .9em; padding: 1px 5px; border-radius: 5px; background: rgb(255 255 255 / .08); }
+.msg.tool { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgb(255 255 255 / .07); background: rgb(255 255 255 / .025);
+  font: 12px/1.4 var(--font-mono); color: rgb(255 255 255 / .75); max-width: 100%; }
+.msg .tl { padding: 2px 7px; border-radius: 6px; background: rgb(147 197 253 / .14); color: #93c5fd; font-size: 11px; }
+.msg .res { margin-left: auto; color: rgb(255 255 255 / .5); }
+.msg .res.ok { color: #86efac; }
+.g-c { color: #fcd34d; } .g-b { color: #86efac; }
+@media (prefers-reduced-motion: reduce) { .mcp-panel { animation: none; } }
 /* ---------- FAQ ---------- */
 .faq { margin: 48px auto 0; max-width: 780px; border-top: 1px solid var(--fg-8); }
 .faq details { border-bottom: 1px solid var(--fg-8); }
@@ -773,59 +849,227 @@ npx -y querydig --format html -o querydig-report.html</pre>
 </section>
 
 <!-- ============ MCP ============ -->
-<section class="section" id="mcp">
-  <div class="wrap split">
-    <div class="head">
+<section class="section mcp" id="mcp">
+  <div class="mcp-glow" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="head center">
       <span class="eyebrow reveal">AI assistants · MCP <span class="new-badge">New in 0.5</span></span>
-      <h2 class="h2 reveal" style="--d:60ms">Let your AI assistant <span class="serif">fix</span> slow queries, and prove it.</h2>
-      <p class="lede reveal" style="--d:120ms"><code>querydig mcp</code> is a <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server for Claude Code, Claude Desktop, Cursor, VS Code and any other MCP client. querydig finds and verifies; the assistant rewrites. No API key, and your code stays local.</p>
-      <ul class="checks reveal" style="--d:180ms">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Find:</b> <code>scan_queries</code> returns findings by severity, and <code>get_finding_context</code> gives the code around each one with a before/after example.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Check before writing:</b> <code>analyze_snippet</code> tests a proposed rewrite before it touches disk.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Fix safely:</b> <code>apply_safe_fixes</code> makes the same mechanical fixes as <code>--fix</code>, as a dry run unless told otherwise.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Verify:</b> rescans the edited files, and <code>suggest_indexes</code> builds an index plan from live query plans.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>The <code>optimize_queries</code> prompt runs the whole loop: scan, safe fixes, rewrite the worst findings, verify each, summary table.</span></li>
-      </ul>
+      <h2 class="h2 reveal" style="--d:60ms">Your AI assistant finds slow queries, <span class="serif">fixes</span> them, and proves it.</h2>
+      <p class="lede reveal" style="--d:120ms"><code>querydig mcp</code> is a <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server. querydig does the detection and verification; your assistant does the rewrite. No API key, and your code never leaves your machine.</p>
+      <div class="mcp-works reveal" style="--d:180ms" aria-label="Works with"><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true" class="lg-claude"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg>Claude Code</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>Codex</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg>Cursor</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z"/></svg>VS Code</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.55 5.067c-1.2038-.002-2.1806.973-2.1806 2.1765v4.8676c0 .972-.8035 1.7594-1.7597 1.7594-.568 0-1.1352-.286-1.4718-.7659l-4.9713-7.1003c-.4125-.5896-1.0837-.941-1.8103-.941-1.1334 0-2.1533.9635-2.1533 2.153v4.8957c0 .972-.7969 1.7594-1.7596 1.7594-.57 0-1.1363-.286-1.4728-.7658L.4076 5.1598C.2822 4.9798 0 5.0688 0 5.2882v4.2452c0 .2147.0656.4228.1884.599l5.4748 7.8183c.3234.462.8006.8052 1.3509.9298 1.3771.313 2.6446-.747 2.6446-2.0977v-4.893c0-.972.7875-1.7593 1.7596-1.7593h.003a1.798 1.798 0 0 1 1.4718.7658l4.9723 7.0994c.4135.5905 1.05.941 1.8093.941 1.1587 0 2.1515-.9645 2.1515-2.153v-4.8948c0-.972.7875-1.7594 1.7596-1.7594h.194a.22.22 0 0 0 .2204-.2202v-4.622a.22.22 0 0 0-.2203-.2203Z"/></svg>Windsurf</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gemG" x1="0" y1="24" x2="24" y2="0"><stop offset="0" stop-color="#1c7dff"/><stop offset=".55" stop-color="#9b72f2"/><stop offset="1" stop-color="#f2a3c9"/></linearGradient></defs><path fill="url(#gemG)" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg>Gemini CLI</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.25 1.5a.75.75 0 0 0-.75.75v16.5H0V2.25A2.25 2.25 0 0 1 2.25 0h20.095c1.002 0 1.504 1.212.795 1.92L10.764 14.298h3.486V12.75h1.5v1.922a1.125 1.125 0 0 1-1.125 1.125H9.264l-2.578 2.578h11.689V9h1.5v9.375a1.5 1.5 0 0 1-1.5 1.5H5.185L2.562 22.5H21.75a.75.75 0 0 0 .75-.75V5.25H24v16.5A2.25 2.25 0 0 1 21.75 24H1.655C.653 24 .151 22.788.86 22.08L13.19 9.75H9.75v1.5h-1.5V9.375A1.125 1.125 0 0 1 9.375 8.25h5.314l2.625-2.625H5.625V15h-1.5V5.625a1.5 1.5 0 0 1 1.5-1.5h13.19L21.438 1.5z"/></svg>Zed</span></div>
     </div>
-    <div class="reveal" style="--d:120ms">
-      <div class="ci-tabs" role="tablist" aria-label="MCP client">
-        <button role="tab" aria-selected="true" data-tab="mcp-claude">Claude Code</button>
-        <button role="tab" aria-selected="false" data-tab="mcp-json">Any MCP client</button>
-        <button role="tab" aria-selected="false" data-tab="mcp-run">Run the loop</button>
+
+    <div class="mcp-shell reveal" style="--d:120ms">
+      <div class="mcp-side">
+        <p class="mcp-label">1 · Pick your assistant</p>
+        <div class="mcp-clients" role="tablist" aria-label="AI assistant" aria-orientation="vertical">
+        <button type="button" role="tab" id="mcpt-claude-code" aria-controls="mcpp-claude-code" aria-selected="true" tabindex="0" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true" class="lg-claude"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg></span>
+          <span class="mcp-cname">Claude Code<small>Anthropic · CLI</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-codex" aria-controls="mcpp-codex" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg></span>
+          <span class="mcp-cname">Codex<small>OpenAI · CLI &amp; IDE</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-cursor" aria-controls="mcpp-cursor" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg></span>
+          <span class="mcp-cname">Cursor<small>Anysphere · Editor</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-vscode" aria-controls="mcpp-vscode" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z"/></svg></span>
+          <span class="mcp-cname">VS Code<small>GitHub Copilot · Editor</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-windsurf" aria-controls="mcpp-windsurf" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.55 5.067c-1.2038-.002-2.1806.973-2.1806 2.1765v4.8676c0 .972-.8035 1.7594-1.7597 1.7594-.568 0-1.1352-.286-1.4718-.7659l-4.9713-7.1003c-.4125-.5896-1.0837-.941-1.8103-.941-1.1334 0-2.1533.9635-2.1533 2.153v4.8957c0 .972-.7969 1.7594-1.7596 1.7594-.57 0-1.1363-.286-1.4728-.7658L.4076 5.1598C.2822 4.9798 0 5.0688 0 5.2882v4.2452c0 .2147.0656.4228.1884.599l5.4748 7.8183c.3234.462.8006.8052 1.3509.9298 1.3771.313 2.6446-.747 2.6446-2.0977v-4.893c0-.972.7875-1.7593 1.7596-1.7593h.003a1.798 1.798 0 0 1 1.4718.7658l4.9723 7.0994c.4135.5905 1.05.941 1.8093.941 1.1587 0 2.1515-.9645 2.1515-2.153v-4.8948c0-.972.7875-1.7594 1.7596-1.7594h.194a.22.22 0 0 0 .2204-.2202v-4.622a.22.22 0 0 0-.2203-.2203Z"/></svg></span>
+          <span class="mcp-cname">Windsurf<small>Cascade · Editor</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-claude-desktop" aria-controls="mcpp-claude-desktop" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true" class="lg-claude"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg></span>
+          <span class="mcp-cname">Claude Desktop<small>Anthropic · App</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-gemini" aria-controls="mcpp-gemini" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gemG" x1="0" y1="24" x2="24" y2="0"><stop offset="0" stop-color="#1c7dff"/><stop offset=".55" stop-color="#9b72f2"/><stop offset="1" stop-color="#f2a3c9"/></linearGradient></defs><path fill="url(#gemG)" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg></span>
+          <span class="mcp-cname">Gemini CLI<small>Google · CLI</small></span>
+        </button>
+        <button type="button" role="tab" id="mcpt-zed" aria-controls="mcpp-zed" aria-selected="false" tabindex="-1" class="mcp-client">
+          <span class="mcp-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.25 1.5a.75.75 0 0 0-.75.75v16.5H0V2.25A2.25 2.25 0 0 1 2.25 0h20.095c1.002 0 1.504 1.212.795 1.92L10.764 14.298h3.486V12.75h1.5v1.922a1.125 1.125 0 0 1-1.125 1.125H9.264l-2.578 2.578h11.689V9h1.5v9.375a1.5 1.5 0 0 1-1.5 1.5H5.185L2.562 22.5H21.75a.75.75 0 0 0 .75-.75V5.25H24v16.5A2.25 2.25 0 0 1 21.75 24H1.655C.653 24 .151 22.788.86 22.08L13.19 9.75H9.75v1.5h-1.5V9.375A1.125 1.125 0 0 1 9.375 8.25h5.314l2.625-2.625H5.625V15h-1.5V5.625a1.5 1.5 0 0 1 1.5-1.5h13.19L21.438 1.5z"/></svg></span>
+          <span class="mcp-cname">Zed<small>Zed Industries · Editor</small></span>
+        </button>
+        </div>
       </div>
-      <div class="code ci-panel" data-panel="mcp-claude">
-        <button class="copy-code" type="button">Copy</button>
-<pre><span class="c"># add the server (no install needed)</span>
+      <div class="mcp-main">
+        <p class="mcp-label">2 · Add querydig</p>
+      <div class="mcp-panel" role="tabpanel" id="mcpp-claude-code" aria-labelledby="mcpt-claude-code">
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>Terminal</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre><span class="c"># add querydig to Claude Code</span>
 claude mcp add querydig -- npx -y querydig mcp
 
 <span class="c"># optional: live evidence from a read-only replica</span>
 claude mcp add querydig \
   -e QUERYDIG_DB_URI=postgres://reader:***@replica/shop \
   -- npx -y querydig mcp</pre>
+        </div>
+        <div class="mcp-foot"><p>Then type <code>/mcp__querydig__optimize_queries</code> to run the full loop.</p></div>
       </div>
-      <div class="code ci-panel" data-panel="mcp-json" hidden>
-        <button class="copy-code" type="button">Copy</button>
-<pre><span class="c">// Claude Desktop, Cursor, VS Code, ...</span>
-{
+      <div class="mcp-panel" role="tabpanel" id="mcpp-codex" aria-labelledby="mcpt-codex" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>Terminal  ·  ~/.codex/config.toml</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre><span class="c"># one command</span>
+codex mcp add querydig -- npx -y querydig mcp
+
+<span class="c"># or in ~/.codex/config.toml</span>
+<span class="k">[mcp_servers.querydig]</span>
+<span class="k">command</span> = <span class="s">"npx"</span>
+<span class="k">args</span> = [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]</pre>
+        </div>
+        <div class="mcp-foot"><p>Works in the Codex CLI and the Codex IDE extension, which share the same config.</p></div>
+      </div>
+      <div class="mcp-panel" role="tabpanel" id="mcpp-cursor" aria-labelledby="mcpt-cursor" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>.cursor/mcp.json</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre>{
   <span class="k">"mcpServers"</span>: {
     <span class="k">"querydig"</span>: {
       <span class="k">"command"</span>: <span class="s">"npx"</span>,
-      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>],
-      <span class="k">"env"</span>: { <span class="k">"QUERYDIG_DB_URI"</span>: <span class="s">"postgres://reader:***@replica/shop"</span> }
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]
     }
   }
 }</pre>
+        </div>
+        <div class="mcp-foot"><p>Use <code>~/.cursor/mcp.json</code> to enable it in every project.</p><a class="btn btn-primary btn-sm mcp-install" href="cursor://anysphere.cursor-deeplink/mcp/install?name=querydig&amp;config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInF1ZXJ5ZGlnIiwibWNwIl19"><span class="mcp-install-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg></span>Add to Cursor</a></div>
       </div>
-      <div class="code ci-panel" data-panel="mcp-run" hidden>
-        <button class="copy-code" type="button">Copy</button>
-<pre><span class="c"># in Claude Code, run the full fix-and-verify loop</span>
-/mcp__querydig__optimize_queries
+      <div class="mcp-panel" role="tabpanel" id="mcpp-vscode" aria-labelledby="mcpt-vscode" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>.vscode/mcp.json</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre>{
+  <span class="k">"servers"</span>: {
+    <span class="k">"querydig"</span>: {
+      <span class="k">"type"</span>: <span class="s">"stdio"</span>,
+      <span class="k">"command"</span>: <span class="s">"npx"</span>,
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]
+    }
+  }
+}</pre>
+        </div>
+        <div class="mcp-foot"><p>Open Copilot Chat in Agent mode and the querydig tools are ready to use.</p><a class="btn btn-primary btn-sm mcp-install" href="vscode:mcp/install?%7B%22name%22%3A%22querydig%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22querydig%22%2C%22mcp%22%5D%7D"><span class="mcp-install-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z"/></svg></span>Install in VS Code</a></div>
+      </div>
+      <div class="mcp-panel" role="tabpanel" id="mcpp-windsurf" aria-labelledby="mcpt-windsurf" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>~/.codeium/windsurf/mcp_config.json</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre>{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"querydig"</span>: {
+      <span class="k">"command"</span>: <span class="s">"npx"</span>,
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]
+    }
+  }
+}</pre>
+        </div>
+        <div class="mcp-foot"><p>Save, then press refresh in the Cascade MCP panel.</p></div>
+      </div>
+      <div class="mcp-panel" role="tabpanel" id="mcpp-claude-desktop" aria-labelledby="mcpt-claude-desktop" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>claude_desktop_config.json</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre>{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"querydig"</span>: {
+      <span class="k">"command"</span>: <span class="s">"npx"</span>,
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]
+    }
+  }
+}</pre>
+        </div>
+        <div class="mcp-foot"><p>Settings → Developer → Edit Config. Restart Claude Desktop after saving.</p></div>
+      </div>
+      <div class="mcp-panel" role="tabpanel" id="mcpp-gemini" aria-labelledby="mcpt-gemini" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>~/.gemini/settings.json</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre>{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"querydig"</span>: {
+      <span class="k">"command"</span>: <span class="s">"npx"</span>,
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]
+    }
+  }
+}</pre>
+        </div>
+        <div class="mcp-foot"><p>Run <code>/mcp</code> inside Gemini CLI to confirm querydig is connected.</p></div>
+      </div>
+      <div class="mcp-panel" role="tabpanel" id="mcpp-zed" aria-labelledby="mcpt-zed" hidden>
+        <div class="code mcp-win">
+          <div class="mcp-bar"><i></i><i></i><i></i><span>Zed settings.json</span></div>
+          <button class="copy-code" type="button">Copy</button>
+<pre>{
+  <span class="k">"context_servers"</span>: {
+    <span class="k">"querydig"</span>: {
+      <span class="k">"source"</span>: <span class="s">"custom"</span>,
+      <span class="k">"command"</span>: <span class="s">"npx"</span>,
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>]
+    }
+  }
+}</pre>
+        </div>
+        <div class="mcp-foot"><p>Open the Agent Panel; querydig shows up under context servers.</p></div>
+      </div>
+        <p class="mcp-env"><b>Optional:</b> set <code>QUERYDIG_DB_URI</code> to a read-only replica in the server's <code>env</code>. The assistant then gets row counts, query plans and missing indexes, and the password never enters the chat.</p>
+      </div>
+    </div>
 
-<span class="c"># or just ask</span>
-<span class="s">"Find the slowest queries in this repo, fix them,
- and verify each fix with querydig."</span></pre>
+    <ol class="mcp-flow" aria-label="The fix-and-verify loop">
+      <li class="mcp-step reveal" style="--d:0ms">
+        <span class="mcp-num">01</span>
+        <h3>Find</h3>
+        <p>Scans the repo and ranks every slow query by severity, then reads the code around each one.</p>
+        <div class="mcp-tools"><code>scan_queries</code><code>get_finding_context</code></div>
+      </li>      <li class="mcp-step reveal" style="--d:70ms">
+        <span class="mcp-num">02</span>
+        <h3>Check</h3>
+        <p>Tests a proposed rewrite in memory, before a single line is written to disk.</p>
+        <div class="mcp-tools"><code>analyze_snippet</code></div>
+      </li>      <li class="mcp-step reveal" style="--d:140ms">
+        <span class="mcp-num">03</span>
+        <h3>Fix</h3>
+        <p>Applies the safe, mechanical fixes. Dry run unless the assistant asks to write.</p>
+        <div class="mcp-tools"><code>apply_safe_fixes</code></div>
+      </li>      <li class="mcp-step reveal" style="--d:210ms">
+        <span class="mcp-num">04</span>
+        <h3>Verify</h3>
+        <p>Rescans the edited files and plans missing indexes from live query plans.</p>
+        <div class="mcp-tools"><code>scan_queries</code><code>suggest_indexes</code></div>
+      </li>
+    </ol>
+
+    <div class="mcp-demo">
+      <div class="mcp-demo-copy reveal">
+        <span class="eyebrow">One prompt</span>
+        <h3 class="mcp-h3">The whole loop, on <span class="serif">autopilot</span>.</h3>
+        <p>The built-in <code>optimize_queries</code> prompt scans, applies safe fixes, rewrites the worst findings one at a time, verifies each with querydig, and ends with a before/after table. Every claim is checked by the analyser, not taken on the model's word.</p>
+        <button class="cmd mcp-cmd" type="button" data-copy="/mcp__querydig__optimize_queries" aria-label="Copy command: /mcp__querydig__optimize_queries">
+          <span><span class="dollar">&gt; </span>/mcp__querydig__optimize_queries</span>
+          <span class="copy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+        </button>
       </div>
-      <p class="mcp-note"><code>QUERYDIG_DB_URI</code> is optional. It gives the assistant row counts, query plans and missing indexes without putting the secret in the chat.</p>
+      <div class="mcp-chat reveal" style="--d:120ms" role="img" aria-label="Example session: the assistant scans, rewrites an N+1 query, verifies it and raises the grade from C to B">
+        <div class="mcp-bar"><i></i><i></i><i></i><span>Example session</span></div>
+        <div class="mcp-msgs">
+          <div class="msg you">Find the slow queries in this repo and fix them.</div>
+          <div class="msg tool"><span class="tl">querydig</span> scan_queries <span class="res">2 critical · 7 high · grade <b class="g-c">C</b></span></div>
+          <div class="msg tool"><span class="tl">querydig</span> get_finding_context <span class="res">orders.service.ts:42</span></div>
+          <div class="msg ai"><code>Order.find()</code> runs once per user, an N+1. I'll batch it into a single <code>$in</code> query.</div>
+          <div class="msg tool"><span class="tl">querydig</span> analyze_snippet <span class="res ok">no findings ✓</span></div>
+          <div class="msg tool"><span class="tl">querydig</span> apply_safe_fixes <span class="res">4 fixes · .lean(), exists()</span></div>
+          <div class="msg tool"><span class="tl">querydig</span> scan_queries <span class="res ok">QD001 resolved ✓</span></div>
+          <div class="msg ai">Done: 5 queries fixed and verified. Grade <b class="g-c">C</b> → <b class="g-b">B</b>.</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -882,7 +1126,7 @@ claude mcp add querydig \
       <details><summary>Which languages and libraries are supported?</summary><p>JavaScript and TypeScript (Mongoose, the MongoDB driver, Prisma, TypeORM, Sequelize, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) Go (mongo-go-driver, GORM, xorm, <code>database/sql</code>), Java (Spring Data JPA/MongoDB, Hibernate, JDBC, jOOQ), Ruby (ActiveRecord, Mongoid, Sequel) and PHP (Laravel Eloquent, Doctrine, PDO, mysqli). Raw SQL strings are checked in every language.</p></details>
       <details><summary>How noisy is it on a real codebase?</summary><p>Tests, specs, fixtures, migrations, seeds and benchmarks are skipped by default. Polling and batching loops, loops over collections, and array or string helpers aren't treated as queries. On Gitea (about 2,200 Go files) it reports 16 findings in under a second. To silence one, add <code>// querydig-ignore QD001</code>.</p></details>
       <details><summary>Can it fix issues automatically?</summary><p>Partly, and only where it's safe. <code>npx querydig --fix</code> adds <code>.lean()</code> to read-only Mongoose queries, turns <code>count() &gt; 0</code> existence checks into <code>exists()</code> (Django, Rails, Laravel, Spring Data) or a limited count (MongoDB), and switches whole-table loops to <code>find_each</code> / <code>lazy()</code> in Rails and Laravel (preview with <code>--dry-run</code>). With <code>--uri</code>, <code>--emit-indexes</code> writes every missing index to one script for you to review and run. N+1 rewrites and limits change behaviour, so those stay as suggested fixes.</p></details>
-      <details><summary>Can my AI assistant use it?</summary><p>Yes. <code>querydig mcp</code> starts an MCP server for Claude Code, Claude Desktop, Cursor, VS Code and other clients. Add it with <code>claude mcp add querydig -- npx -y querydig mcp</code>. The assistant can scan, read the code around a finding, check a rewrite before writing it, apply safe fixes and rescan to verify. It runs locally and needs no API key. See <a href="#mcp">AI assistants</a>.</p></details>
+      <details><summary>Can my AI assistant use it?</summary><p>Yes. <code>querydig mcp</code> starts an MCP server for Claude Code, Codex, Cursor, VS Code (Copilot), Windsurf, Claude Desktop, Gemini CLI, Zed and any other MCP client. In Claude Code it is one command: <code>claude mcp add querydig -- npx -y querydig mcp</code>. The assistant can scan, read the code around a finding, check a rewrite before writing it, apply safe fixes and rescan to verify. It runs locally and needs no API key. See <a href="#mcp">AI assistants</a>.</p></details>
       <details><summary>How do I add it to a project that already has hundreds of issues?</summary><p>Run <code>npx querydig --update-baseline</code> once and commit <code>.querydig-baseline.json</code>. Then run <code>--baseline .querydig-baseline.json --fail-on high</code> in CI, so only newly introduced issues fail the build.</p></details>
       <details><summary>What do I need installed?</summary><p>Node.js 22.12 or newer. Run it with <code>npx querydig</code>, or add it as a dev dependency with <code>npm i -D querydig</code> and an npm script.</p></details>
       <details><summary>Is it free?</summary><p>Yes. It's MIT licensed open source, and there's nothing paid. Issues and pull requests are welcome on GitHub.</p></details>
@@ -999,6 +1243,27 @@ claude mcp add querydig \
       });
     });
   });
+
+  // ---------- MCP client picker ----------
+  (function () {
+    var list = document.querySelector('.mcp-clients'); if (!list) return;
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role=tab]'));
+    function pick(t, focus) {
+      tabs.forEach(function (x) { var on = x === t; x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1;
+        document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+      if (focus) t.focus();
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { pick(t); });
+      t.addEventListener('keydown', function (e) {
+        var k = e.key, n = null;
+        if (k === 'ArrowDown' || k === 'ArrowRight') n = tabs[(i + 1) % tabs.length];
+        if (k === 'ArrowUp' || k === 'ArrowLeft') n = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (k === 'Home') n = tabs[0]; if (k === 'End') n = tabs[tabs.length - 1];
+        if (n) { e.preventDefault(); pick(n, true); }
+      });
+    });
+  })();
 
   // ---------- libraries marquee ----------
   var LIBS = [['Mongoose', 'js'], ['MongoDB driver', 'js'], ['Prisma', 'ts'], ['TypeORM', 'ts'], ['Sequelize', 'js'], ['pg', 'js'], ['mysql2', 'js'], ['knex', 'js'], ['PyMongo', 'py'], ['Motor', 'py'], ['Django ORM', 'py'], ['SQLAlchemy', 'py'], ['mongo-go-driver', 'go'], ['GORM', 'go'], ['xorm', 'go'], ['database/sql', 'go']];
