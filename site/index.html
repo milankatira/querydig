@@ -327,6 +327,10 @@ p code, li code, .lede code { font-size: .88em; padding: 1px 5px; border-radius:
 .rule .meta { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
 @media (max-width: 640px) { .rule { grid-template-columns: 1fr; gap: 8px; } .rule .meta { justify-content: flex-start; } }
 
+.new-badge { display: inline-block; margin-left: 8px; padding: 3px 9px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 11px; letter-spacing: .02em; text-transform: none; vertical-align: 1px; }
+.mcp-note { margin: 14px 4px 0; color: var(--fg-55); font-size: 14px; line-height: 1.6; }
+.mcp-note code, #mcp .lede code { font-size: .9em; padding: 2px 6px; border-radius: 6px; background: var(--fg-5); }
+#mcp .lede a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 /* ---------- FAQ ---------- */
 .faq { margin: 48px auto 0; max-width: 780px; border-top: 1px solid var(--fg-8); }
 .faq details { border-bottom: 1px solid var(--fg-8); }
@@ -430,6 +434,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
       <a href="#features">What it finds</a>
       <a href="#how">How it works</a>
       <a href="#ci">CI</a>
+      <a href="#mcp">AI / MCP</a>
       <a href="#rules">Rules</a>
       <a href="#faq">FAQ</a>
     </div>
@@ -452,6 +457,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
     <a href="#features">What it finds</a>
     <a href="#how">How it works</a>
     <a href="#ci">CI</a>
+      <a href="#mcp">AI / MCP</a>
     <a href="#rules">Rules</a>
     <a href="#faq">FAQ</a>
     <a href="https://github.com/milankatira/querydig" target="_blank" rel="noopener">GitHub</a>
@@ -463,7 +469,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 <section class="hero" id="top">
   <div class="bg-fx" aria-hidden="true"><div class="bg-grid"></div><div class="bg-glow"></div></div>
   <div class="wrap hero-inner">
-    <span class="pill reveal"><span class="ping" aria-hidden="true"></span>Open source · MIT · runs on your machine</span>
+    <span class="pill reveal"><span class="ping" aria-hidden="true"></span>New: MCP server for AI assistants · Open source · MIT</span>
     <h1 class="hero-title">
       <span class="line reveal" style="--d:80ms">What's your</span>
       <span class="line reveal" style="--d:160ms"><span class="serif grad">query health</span></span>
@@ -766,6 +772,64 @@ npx -y querydig --format html -o querydig-report.html</pre>
   </div>
 </section>
 
+<!-- ============ MCP ============ -->
+<section class="section" id="mcp">
+  <div class="wrap split">
+    <div class="head">
+      <span class="eyebrow reveal">AI assistants · MCP <span class="new-badge">New in 0.5</span></span>
+      <h2 class="h2 reveal" style="--d:60ms">Let your AI assistant <span class="serif">fix</span> slow queries, and prove it.</h2>
+      <p class="lede reveal" style="--d:120ms"><code>querydig mcp</code> is a <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server for Claude Code, Claude Desktop, Cursor, VS Code and any other MCP client. querydig finds and verifies; the assistant rewrites. No API key, and your code stays local.</p>
+      <ul class="checks reveal" style="--d:180ms">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Find:</b> <code>scan_queries</code> returns findings by severity, and <code>get_finding_context</code> gives the code around each one with a before/after example.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Check before writing:</b> <code>analyze_snippet</code> tests a proposed rewrite before it touches disk.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Fix safely:</b> <code>apply_safe_fixes</code> makes the same mechanical fixes as <code>--fix</code>, as a dry run unless told otherwise.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Verify:</b> rescans the edited files, and <code>suggest_indexes</code> builds an index plan from live query plans.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>The <code>optimize_queries</code> prompt runs the whole loop: scan, safe fixes, rewrite the worst findings, verify each, summary table.</span></li>
+      </ul>
+    </div>
+    <div class="reveal" style="--d:120ms">
+      <div class="ci-tabs" role="tablist" aria-label="MCP client">
+        <button role="tab" aria-selected="true" data-tab="mcp-claude">Claude Code</button>
+        <button role="tab" aria-selected="false" data-tab="mcp-json">Any MCP client</button>
+        <button role="tab" aria-selected="false" data-tab="mcp-run">Run the loop</button>
+      </div>
+      <div class="code ci-panel" data-panel="mcp-claude">
+        <button class="copy-code" type="button">Copy</button>
+<pre><span class="c"># add the server (no install needed)</span>
+claude mcp add querydig -- npx -y querydig mcp
+
+<span class="c"># optional: live evidence from a read-only replica</span>
+claude mcp add querydig \
+  -e QUERYDIG_DB_URI=postgres://reader:***@replica/shop \
+  -- npx -y querydig mcp</pre>
+      </div>
+      <div class="code ci-panel" data-panel="mcp-json" hidden>
+        <button class="copy-code" type="button">Copy</button>
+<pre><span class="c">// Claude Desktop, Cursor, VS Code, ...</span>
+{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"querydig"</span>: {
+      <span class="k">"command"</span>: <span class="s">"npx"</span>,
+      <span class="k">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"querydig"</span>, <span class="s">"mcp"</span>],
+      <span class="k">"env"</span>: { <span class="k">"QUERYDIG_DB_URI"</span>: <span class="s">"postgres://reader:***@replica/shop"</span> }
+    }
+  }
+}</pre>
+      </div>
+      <div class="code ci-panel" data-panel="mcp-run" hidden>
+        <button class="copy-code" type="button">Copy</button>
+<pre><span class="c"># in Claude Code, run the full fix-and-verify loop</span>
+/mcp__querydig__optimize_queries
+
+<span class="c"># or just ask</span>
+<span class="s">"Find the slowest queries in this repo, fix them,
+ and verify each fix with querydig."</span></pre>
+      </div>
+      <p class="mcp-note"><code>QUERYDIG_DB_URI</code> is optional. It gives the assistant row counts, query plans and missing indexes without putting the secret in the chat.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============ PRIVACY ============ -->
 <section class="section privacy" id="privacy">
   <div class="wrap">
@@ -818,6 +882,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
       <details><summary>Which languages and libraries are supported?</summary><p>JavaScript and TypeScript (Mongoose, the MongoDB driver, Prisma, TypeORM, Sequelize, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) Go (mongo-go-driver, GORM, xorm, <code>database/sql</code>), Java (Spring Data JPA/MongoDB, Hibernate, JDBC, jOOQ), Ruby (ActiveRecord, Mongoid, Sequel) and PHP (Laravel Eloquent, Doctrine, PDO, mysqli). Raw SQL strings are checked in every language.</p></details>
       <details><summary>How noisy is it on a real codebase?</summary><p>Tests, specs, fixtures, migrations, seeds and benchmarks are skipped by default. Polling and batching loops, loops over collections, and array or string helpers aren't treated as queries. On Gitea (about 2,200 Go files) it reports 16 findings in under a second. To silence one, add <code>// querydig-ignore QD001</code>.</p></details>
       <details><summary>Can it fix issues automatically?</summary><p>Partly, and only where it's safe. <code>npx querydig --fix</code> adds <code>.lean()</code> to read-only Mongoose queries, turns <code>count() &gt; 0</code> existence checks into <code>exists()</code> (Django, Rails, Laravel, Spring Data) or a limited count (MongoDB), and switches whole-table loops to <code>find_each</code> / <code>lazy()</code> in Rails and Laravel (preview with <code>--dry-run</code>). With <code>--uri</code>, <code>--emit-indexes</code> writes every missing index to one script for you to review and run. N+1 rewrites and limits change behaviour, so those stay as suggested fixes.</p></details>
+      <details><summary>Can my AI assistant use it?</summary><p>Yes. <code>querydig mcp</code> starts an MCP server for Claude Code, Claude Desktop, Cursor, VS Code and other clients. Add it with <code>claude mcp add querydig -- npx -y querydig mcp</code>. The assistant can scan, read the code around a finding, check a rewrite before writing it, apply safe fixes and rescan to verify. It runs locally and needs no API key. See <a href="#mcp">AI assistants</a>.</p></details>
       <details><summary>How do I add it to a project that already has hundreds of issues?</summary><p>Run <code>npx querydig --update-baseline</code> once and commit <code>.querydig-baseline.json</code>. Then run <code>--baseline .querydig-baseline.json --fail-on high</code> in CI, so only newly introduced issues fail the build.</p></details>
       <details><summary>What do I need installed?</summary><p>Node.js 22.12 or newer. Run it with <code>npx querydig</code>, or add it as a dev dependency with <code>npm i -D querydig</code> and an npm script.</p></details>
       <details><summary>Is it free?</summary><p>Yes. It's MIT licensed open source, and there's nothing paid. Issues and pull requests are welcome on GitHub.</p></details>
@@ -867,7 +932,7 @@ npx -y querydig --format html -o querydig-report.html</pre>
       </nav>
       <nav class="foot-col" aria-label="Guides">
         <h4>Guides</h4>
-        <ul><li><a href="https://github.com/milankatira/querydig#usage" target="_blank" rel="noopener">Usage</a></li><li><a href="#ci">CI setup</a></li><li><a href="https://github.com/milankatira/querydig#configuration" target="_blank" rel="noopener">Configuration</a></li><li><a href="https://github.com/milankatira/querydig/tree/main/examples/ci" target="_blank" rel="noopener">Pipeline templates</a></li></ul>
+        <ul><li><a href="https://github.com/milankatira/querydig#usage" target="_blank" rel="noopener">Usage</a></li><li><a href="#ci">CI setup</a></li><li><a href="#mcp">AI assistants (MCP)</a></li><li><a href="https://github.com/milankatira/querydig#configuration" target="_blank" rel="noopener">Configuration</a></li><li><a href="https://github.com/milankatira/querydig/tree/main/examples/ci" target="_blank" rel="noopener">Pipeline templates</a></li></ul>
       </nav>
       <nav class="foot-col" aria-label="Project">
         <h4>Project</h4>
@@ -924,11 +989,14 @@ npx -y querydig --format html -o querydig-report.html</pre>
   });
 
   // ---------- CI tabs ----------
-  var tabs = document.querySelectorAll('.ci-tabs [role=tab]');
-  tabs.forEach(function (t) {
-    t.addEventListener('click', function () {
-      tabs.forEach(function (x) { x.setAttribute('aria-selected', String(x === t)); });
-      document.querySelectorAll('.ci-panel').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== t.getAttribute('data-tab'); });
+  document.querySelectorAll('.ci-tabs').forEach(function (group) {
+    var tabs = group.querySelectorAll('[role=tab]');
+    var panels = group.parentElement.querySelectorAll('.ci-panel');
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        tabs.forEach(function (x) { x.setAttribute('aria-selected', String(x === t)); });
+        panels.forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== t.getAttribute('data-tab'); });
+      });
     });
   });
 
