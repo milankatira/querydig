@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { analyzeSource, analyzeSourceFull } from '../src/analyzer.js';
 import { applyFixes } from '../src/fix.js';
@@ -211,7 +212,7 @@ describe('Java — scan', () => {
     expect(s.filesScanned).toBe(1);
     expect(s.findings.map((f) => [f.file, f.ruleId, f.lang])).toEqual([['src/main/java/A.java', 'QD001', 'java']]);
 
-    const sample = await scan({ root: new URL('../examples/sample-app/java', import.meta.url).pathname, threads: 1 });
+    const sample = await scan({ root: fileURLToPath(new URL('../examples/sample-app/java', import.meta.url)), threads: 1 });
     const rules = new Set(sample.findings.map((f) => f.ruleId));
     for (const r of ['QD001', 'QD002', 'QD003', 'SQ001', 'SQ009', 'SQ010', 'SQ002', 'SQ003', 'SQ005', 'SQ006']) expect(rules).toContain(r);
   });
