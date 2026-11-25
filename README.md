@@ -1,5 +1,11 @@
 # querydig
 
+[![npm](https://img.shields.io/npm/v/querydig)](https://www.npmjs.com/package/querydig)
+[![npm downloads](https://img.shields.io/npm/dm/querydig)](https://www.npmjs.com/package/querydig)
+[![license](https://img.shields.io/npm/l/querydig)](LICENSE)
+[![GitHub Action](https://img.shields.io/badge/GitHub_Action-querydig-2088FF?logo=githubactions&logoColor=white)](#github-action)
+[![MCP](https://img.shields.io/badge/MCP-server-8A2BE2)](#ai-assistants-mcp-server)
+
 **Find slow, N+1 and unoptimized database queries before they reach production.**
 
 querydig is a zero-config CLI that statically scans your code for MongoDB and SQL query anti-patterns: N+1 queries, nested queries over results (N²), writes in loops, unbounded reads, unanchored regexes, `skip()`/`OFFSET` pagination, non-sargable SQL and more. Each finding gets a severity (**critical / high / medium / low**), the exact location, why it's slow and how to fix it.
@@ -100,9 +106,14 @@ Built-in noise control: `while`/`for {}` polling loops, batching loops (`skip`/`
 
 `querydig mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io) server, so Claude Code, Claude Desktop, Cursor, VS Code and other MCP clients can find slow queries, rewrite them and check their own fixes. querydig does the detection and verification; the assistant does the rewrite. No API key is needed and your code stays local.
 
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_querydig-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=querydig&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22querydig%22%2C%22mcp%22%5D%7D)
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_querydig-000000?logo=cursor&logoColor=white)](https://cursor.com/en/install-mcp?name=querydig&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInF1ZXJ5ZGlnIiwibWNwIl19)
+
 ```bash
 claude mcp add querydig -- npx -y querydig mcp
 ```
+
+querydig is also listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.milankatira/querydig`.
 
 Or in any client's MCP config:
 
@@ -255,7 +266,40 @@ By default querydig skips `node_modules`, build output, vendored code, `.gitigno
 
 ## CI
 
-**GitHub Actions** (with code-scanning annotations):
+### GitHub Action
+
+```yaml
+name: querydig
+on: [pull_request]
+jobs:
+  querydig:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: milankatira/querydig@v0
+        with:
+          fail-on: high          # critical | high | medium | low | none
+```
+
+On pull requests it scans only the changed files (vs the base branch), uploads findings to code scanning, annotates the diff, writes a Markdown report to the job summary and fails on `fail-on`.
+
+| Input | Default | |
+|---|---|---|
+| `path` | `.` | Project root to scan |
+| `fail-on` | `high` | Fail the job at or above this severity (`none` = never) |
+| `min-severity` | `low` | Hide findings below this severity |
+| `diff` | `auto` | `auto` = PR base branch on pull requests, `''` = full scan, or any git ref |
+| `baseline` | | Baseline file; only new findings count |
+| `sarif` | `true` | Upload to GitHub code scanning (needs `security-events: write`) |
+| `summary` | `true` | Markdown report in the job summary |
+| `uri` | | Read-only DB URI for live evidence, from a secret: `${{ secrets.QUERYDIG_DB_URI }}` |
+| `version` | `latest` | querydig version from npm |
+| `args` | | Extra CLI arguments |
+
+Outputs: `total`, `critical`, `high`, `grade`, `score`, `sarif-file`.
+
+**Without the action** (plain workflow, with code-scanning annotations):
 
 ```yaml
 name: querydig
@@ -285,13 +329,52 @@ querydig:
   artifacts: { when: always, paths: [querydig.md] }
 ```
 
-**Any CI / pre-commit**
+**Any CI**
 
 ```bash
 npx -y querydig --baseline .querydig-baseline.json --fail-on high
 ```
 
+### Pre-commit hooks
+
+[pre-commit](https://pre-commit.com) (`.pre-commit-config.yaml`), checks files changed since `HEAD`:
+
+```yaml
+repos:
+  - repo: https://github.com/milankatira/querydig
+    rev: v0.5.0
+    hooks:
+      - id: querydig
+```
+
+Husky (`.husky/pre-commit`) or lefthook (`lefthook.yml`):
+
+```bash
+npx -y querydig --diff HEAD --fail-on high
+```
+
+```yaml
+pre-commit:
+  commands:
+    querydig:
+      run: npx -y querydig --diff HEAD --fail-on high
+```
+
 More templates in [`examples/ci`](examples/ci).
+
+## How querydig compares
+
+| | How it works | Languages / ORMs | N+1 | MongoDB | Live DB evidence | Auto-fix | MCP |
+|---|---|---|---|---|---|---|---|
+| **querydig** | Static, no app or DB needed (DB optional) | JS/TS, Python, Go, Java, Ruby, PHP; 20+ ORMs and drivers | ✅ incl. N² | ✅ | ✅ Mongo, Postgres | ✅ | ✅ |
+| [Bullet](https://github.com/flyerhzm/bullet) | Runtime, while the app or tests run | Rails (ActiveRecord, Mongoid) | ✅ | ✅ | | | |
+| [nplusone](https://github.com/jmcarp/nplusone) | Runtime | Django, SQLAlchemy | ✅ | | | | |
+| [EagerEye](https://rubygems.org/gems/eager_eye) | Static | Rails | ✅ | | | | |
+| [valk-guard](https://github.com/valkdb/valk-guard) | Static | Postgres: raw SQL, Go, SQLAlchemy, EF Core | | | | | |
+| [squawk](https://github.com/sbdchd/squawk) | Static | Postgres migrations (schema safety) | | | | | |
+| [sqlfluff](https://github.com/sqlfluff/sqlfluff) | Static | `.sql` files (style and lint) | | | | ✅ | |
+
+Runtime detectors and querydig work well together: querydig catches patterns at PR time across the whole codebase, and runtime tools confirm them on the code paths your tests exercise.
 
 ## Programmatic API
 
@@ -306,7 +389,9 @@ console.log(summary.bySeverity, summary.grade);
 - Live mode for MySQL (`performance_schema` + `EXPLAIN`).
 - Repo-wide index recommendations and PR comments.
 - Kotlin and C#.
-- An official GitHub Action and incremental cache.
+- `eslint-plugin-querydig` for inline editor warnings.
+- Test-runner mode (Vitest/Jest) to confirm static findings at runtime.
+- Incremental cache.
 
 ## License
 

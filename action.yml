@@ -1,0 +1,174 @@
+name: 'querydig: N+1 & slow query scanner'
+description: 'Find N+1, slow and unoptimized MongoDB/SQL queries in pull requests (JS/TS, Python, Go, Java, Ruby, PHP).'
+author: 'milankatira'
+branding:
+  icon: 'database'
+  color: 'orange'
+
+inputs:
+  path:
+    description: 'Project root to scan.'
+    default: '.'
+  version:
+    description: 'querydig version from npm (e.g. 0.5.0). Defaults to latest.'
+    default: 'latest'
+  fail-on:
+    description: 'Fail the job if a finding is at or above this severity: critical, high, medium, low, or none.'
+    default: 'high'
+  min-severity:
+    description: 'Hide findings below this severity.'
+    default: 'low'
+  diff:
+    description: 'Only scan changed files. "auto" = the PR base branch on pull_request events (full scan otherwise), "" = always full scan, or any git ref.'
+    default: 'auto'
+  baseline:
+    description: 'Path to a baseline file; findings recorded in it are ignored.'
+    default: ''
+  sarif:
+    description: 'Upload findings to GitHub code scanning (needs permissions: security-events: write).'
+    default: 'true'
+  summary:
+    description: 'Write a Markdown report to the job summary.'
+    default: 'true'
+  uri:
+    description: 'Optional read-only MongoDB/Postgres URI for live evidence. Pass it from a secret.'
+    default: ''
+  args:
+    description: 'Extra arguments passed to every querydig run.'
+    default: ''
+  node-version:
+    description: 'Node.js version to set up (querydig needs 22.12+). Set to "" to use the runner''s Node.'
+    default: '22'
+
+outputs:
+  total:
+    description: 'Number of findings.'
+    value: ${{ steps.result.outputs.total }}
+  critical:
+    description: 'Number of critical findings.'
+    value: ${{ steps.result.outputs.critical }}
+  high:
+    description: 'Number of high findings.'
+    value: ${{ steps.result.outputs.high }}
+  grade:
+    description: 'Query health grade (A-F).'
+    value: ${{ steps.result.outputs.grade }}
+  score:
+    description: 'Query health score (0-100).'
+    value: ${{ steps.result.outputs.score }}
+  sarif-file:
+    description: 'Path of the SARIF report.'
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - if: inputs.node-version != ''
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - id: scan
+      shell: bash
+      env:
+        QD_PATH: ${{ inputs.path }}
+        QD_VERSION: ${{ inputs.version }}
+        QD_MIN: ${{ inputs.min-severity }}
+        QD_DIFF: ${{ inputs.diff }}
+        QD_BASELINE: ${{ inputs.baseline }}
+        QD_ARGS: ${{ inputs.args }}
+        QD_SUMMARY: ${{ inputs.summary }}
+        QD_BASE_REF: ${{ github.base_ref }}
+        QD_EVENT: ${{ github.event_name }}
+        QUERYDIG_DB_URI: ${{ inputs.uri }}
+      run: |
+        set -euo pipefail
+        out="${RUNNER_TEMP}/querydig"
+        mkdir -p "$out"
+
+        diff_ref=""
+        if [ "$QD_DIFF" = "auto" ]; then
+          if [ "$QD_EVENT" = "pull_request" ] || [ "$QD_EVENT" = "pull_request_target" ]; then
+            diff_ref="origin/${QD_BASE_REF}"
+          fi
+        elif [ -n "$QD_DIFF" ]; then
+          diff_ref="$QD_DIFF"
+        fi
+
+        # --diff compares against the merge base, which a shallow checkout doesn't have.
+        if [ -n "$diff_ref" ]; then
+          if [ "$(git -C "$QD_PATH" rev-parse --is-shallow-repository)" = "true" ]; then
+            git -C "$QD_PATH" fetch --no-tags --quiet --unshallow origin
+          fi
+          if [ -n "$QD_BASE_REF" ] && [ "$diff_ref" = "origin/${QD_BASE_REF}" ]; then
+            git -C "$QD_PATH" fetch --no-tags --quiet origin "${QD_BASE_REF}:refs/remotes/origin/${QD_BASE_REF}"
+          fi
+        fi
+
+        common=("$QD_PATH" --min-severity "$QD_MIN")
+        [ -n "$diff_ref" ] && common+=(--diff "$diff_ref")
+        [ -n "$QD_BASELINE" ] && common+=(--baseline "$QD_BASELINE")
+        # shellcheck disable=SC2206
+        [ -n "$QD_ARGS" ] && common+=($QD_ARGS)
+
+        qd() { npx -y "querydig@${QD_VERSION}" "$@"; }
+
+        qd "${common[@]}" --format json -o "$out/querydig.json" --fail-on none
+        qd "${common[@]}" --format sarif -o "$out/querydig.sarif" --fail-on none
+        if [ "$QD_SUMMARY" = "true" ]; then
+          qd "${common[@]}" --format md --fail-on none >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        echo "json-file=$out/querydig.json" >> "$GITHUB_OUTPUT"
+        echo "sarif-file=$out/querydig.sarif" >> "$GITHUB_OUTPUT"
+
+    - id: result
+      shell: bash
+      env:
+        QD_JSON: ${{ steps.scan.outputs.json-file }}
+        QD_SARIF: ${{ steps.scan.outputs.sarif-file }}
+        QD_FAIL_ON: ${{ inputs.fail-on }}
+        QD_PATH: ${{ inputs.path }}
+      run: |
+        node --input-type=module -e '
+          import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
+          import { join } from "node:path";
+          const s = JSON.parse(readFileSync(process.env.QD_JSON, "utf8"));
+          const out = process.env.GITHUB_OUTPUT;
+          const set = (k, v) => appendFileSync(out, `${k}=${v}\n`);
+          // SARIF paths are relative to the scan root; code scanning needs them relative to the repo.
+          const root = (process.env.QD_PATH || ".").replace(/\/+$/, "");
+          if (root !== "." && root !== "") {
+            const sarif = JSON.parse(readFileSync(process.env.QD_SARIF, "utf8"));
+            for (const run of sarif.runs) for (const r of run.results ?? []) for (const l of r.locations ?? []) {
+              const a = l.physicalLocation?.artifactLocation;
+              if (a?.uri) a.uri = join(root, a.uri);
+            }
+            writeFileSync(process.env.QD_SARIF, JSON.stringify(sarif));
+          }
+          set("total", s.findings.length);
+          set("critical", s.bySeverity.critical ?? 0);
+          set("high", s.bySeverity.high ?? 0);
+          set("grade", s.grade);
+          set("score", s.score);
+          const rank = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
+          const failOn = process.env.QD_FAIL_ON;
+          if (failOn && failOn !== "none") {
+            if (!(failOn in rank)) { console.error(`querydig: unknown fail-on "${failOn}"`); process.exit(2); }
+            const failing = s.findings.filter((f) => rank[f.severity] >= rank[failOn]);
+            for (const f of failing.slice(0, 50)) {
+              const file = join(process.env.QD_PATH || ".", f.file);
+              const data = (v) => String(v).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+              const prop = (v) => data(v).replace(/:/g, "%3A").replace(/,/g, "%2C");
+              console.log(`::error file=${prop(file)},line=${f.line},col=${f.column},title=${prop(`${f.ruleId} ${f.title}`)}::${data(f.message)}`);
+            }
+            if (failing.length) { console.error(`querydig: ${failing.length} finding(s) at or above "${failOn}"`); process.exitCode = 1; }
+          }
+          console.log(`querydig: ${s.findings.length} finding(s), grade ${s.grade} (${s.score}/100)`);
+        '
+
+    - if: always() && inputs.sarif == 'true' && steps.scan.outputs.sarif-file != ''
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif-file }}
+        category: querydig

@@ -1,7 +1,7 @@
 name: release
 on:
   push:
-    tags: ['v*']
+    tags: ['v*.*.*']
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -18,3 +18,46 @@ jobs:
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  mcp-registry:
+    # Lists the MCP server in the official MCP Registry (registry.modelcontextprotocol.io).
+    # Runs after npm publish: the registry checks that the npm package's "mcpName" matches server.json.
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Sync server.json version with package.json
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { version } = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const s = JSON.parse(fs.readFileSync("server.json", "utf8"));
+            s.version = version;
+            for (const p of s.packages) p.version = version;
+            fs.writeFileSync("server.json", JSON.stringify(s, null, 2) + "\n");
+          '
+      - name: Install mcp-publisher
+        run: |
+          os=$(uname -s | tr '[:upper:]' '[:lower:]')
+          arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_${os}_${arch}.tar.gz" | tar xz mcp-publisher
+      - name: Publish to MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
+  action-major-tag:
+    # Moves the major tag (v0, v1…) so `uses: milankatira/querydig@v0` picks up each release.
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          major="${GITHUB_REF_NAME%%.*}"
+          git tag -f "$major" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$major"

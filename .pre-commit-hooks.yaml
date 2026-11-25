@@ -1,0 +1,7 @@
+- id: querydig
+  name: querydig (N+1 and slow queries)
+  description: Fail the commit on new high/critical N+1 and slow query patterns in changed files.
+  entry: npx -y querydig --diff HEAD --fail-on high
+  language: system
+  pass_filenames: false
+  types_or: [javascript, jsx, ts, tsx, python, go, java, ruby, php]

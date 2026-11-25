@@ -18,7 +18,7 @@ import { VERSION } from './version.js';
 const program = new Command();
 program
   .name('querydig')
-  .description('Find slow and unoptimized database queries (MongoDB, SQL) in JS/TS, Python and Go code.')
+  .description('Find slow, N+1 and unoptimized database queries (MongoDB, SQL) in JS/TS, Python, Go, Java, Ruby and PHP code.')
   .version(VERSION);
 
 program
