@@ -30,6 +30,12 @@ inputs:
   summary:
     description: 'Write a Markdown report to the job summary.'
     default: 'true'
+  comment:
+    description: 'On pull requests, post the report as one PR comment that is updated on every push (needs permissions: pull-requests: write).'
+    default: 'true'
+  github-token:
+    description: 'Token used to post the PR comment.'
+    default: ${{ github.token }}
   uri:
     description: 'Optional read-only MongoDB/Postgres URI for live evidence. Pass it from a secret.'
     default: ''
@@ -78,6 +84,7 @@ runs:
         QD_BASELINE: ${{ inputs.baseline }}
         QD_ARGS: ${{ inputs.args }}
         QD_SUMMARY: ${{ inputs.summary }}
+        QD_COMMENT: ${{ inputs.comment }}
         QD_BASE_REF: ${{ github.base_ref }}
         QD_EVENT: ${{ github.event_name }}
         QUERYDIG_DB_URI: ${{ inputs.uri }}
@@ -115,8 +122,10 @@ runs:
 
         qd "${common[@]}" --format json -o "$out/querydig.json" --fail-on none
         qd "${common[@]}" --format sarif -o "$out/querydig.sarif" --fail-on none
-        if [ "$QD_SUMMARY" = "true" ]; then
-          qd "${common[@]}" --format md --fail-on none >> "$GITHUB_STEP_SUMMARY"
+        if [ "$QD_SUMMARY" = "true" ] || [ "$QD_COMMENT" = "true" ]; then
+          qd "${common[@]}" --format md --fail-on none > "$out/querydig.md"
+          [ "$QD_SUMMARY" = "true" ] && cat "$out/querydig.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "md-file=$out/querydig.md" >> "$GITHUB_OUTPUT"
         fi
 
         echo "json-file=$out/querydig.json" >> "$GITHUB_OUTPUT"
@@ -167,7 +176,39 @@ runs:
           console.log(`querydig: ${s.findings.length} finding(s), grade ${s.grade} (${s.score}/100)`);
         '
 
+    - name: PR comment
+      if: >-
+        always() && inputs.comment == 'true' && steps.scan.outputs.md-file != '' &&
+        (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        QD_MD: ${{ steps.scan.outputs.md-file }}
+        QD_TOTAL: ${{ steps.result.outputs.total }}
+        QD_PR: ${{ github.event.pull_request.number }}
+        QD_REPO: ${{ github.repository }}
+      run: |
+        set -uo pipefail
+        marker='<!-- querydig-report -->'
+        existing=$(gh api "repos/$QD_REPO/issues/$QD_PR/comments" --paginate \
+          --jq "[.[] | select(.body | startswith(\"$marker\"))][0].id // empty" 2>/dev/null | head -n1)
+        # Nothing found and nothing posted before: stay quiet.
+        if [ "${QD_TOTAL:-0}" = "0" ] && [ -z "$existing" ]; then exit 0; fi
+        body_file="${RUNNER_TEMP}/querydig-comment.md"
+        { echo "$marker"; head -c 60000 "$QD_MD"; } > "$body_file"
+        if [ "$(wc -c < "$QD_MD")" -gt 60000 ]; then
+          printf '\n\n_Report truncated. See the job summary for the full list._\n' >> "$body_file"
+        fi
+        if [ -n "$existing" ]; then
+          gh api -X PATCH "repos/$QD_REPO/issues/comments/$existing" -F body=@"$body_file" >/dev/null
+        else
+          gh api -X POST "repos/$QD_REPO/issues/$QD_PR/comments" -F body=@"$body_file" >/dev/null
+        fi || echo "::warning::querydig: could not post the PR comment. Add 'pull-requests: write' to the job permissions (forked PRs can't be commented on with the default token)."
+        exit 0
+
     - if: always() && inputs.sarif == 'true' && steps.scan.outputs.sarif-file != ''
+      # Code scanning needs GitHub Advanced Security on private repos: don't fail the job without it.
+      continue-on-error: true
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ steps.scan.outputs.sarif-file }}

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { LANGS, type LangSpec } from './languages.js';
 import { PLUGINS, type CallInfo, type LangPlugin } from './langs/index.js';
-import { getParser, type TSNode } from './parser.js';
+import { getParser, type TSNode, type TSTree } from './parser.js';
 import { RULE_MAP } from './rules.js';
 import type { Autofix, Confidence, Db, Finding, LangId, QueryShape, Severity, SortKey } from './types.js';
 
@@ -201,7 +201,12 @@ export interface AnalyzeResult { findings: Finding[]; shapes: QueryShape[] }
 
 export async function analyzeSourceFull(source: string, opts: AnalyzeOptions): Promise<AnalyzeResult> {
   if (/querydig-ignore-file/.test(source.slice(0, 2000))) return { findings: [], shapes: [] };
-  const parser = await getParser(opts.lang);
+  return analyzeWithParser(await getParser(opts.lang), source, opts);
+}
+
+/** Synchronous analysis with an already-loaded parser (used by the ESLint plugin, whose rules must be sync). */
+export function analyzeWithParser(parser: { parse(src: string): TSTree }, source: string, opts: AnalyzeOptions): AnalyzeResult {
+  if (/querydig-ignore-file/.test(source.slice(0, 2000))) return { findings: [], shapes: [] };
   const tree = parser.parse(source);
   try {
     const a = new Analyzer(source, opts, LANGS[opts.lang]);

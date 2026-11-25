@@ -47,7 +47,10 @@
     "sqlalchemy",
     "gorm",
     "mongodb-performance",
-    "sarif"
+    "sarif",
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin"
   ],
   "license": "MIT",
   "type": "module",
@@ -61,8 +64,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
+    "@types/node": "^26.6.10",
     "@types/pg": "^8.23.1",
+    "eslint": "^9.39.5",
     "tree-sitter-wasms": "^0.1.13",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",
@@ -77,6 +81,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./eslint": {
+      "types": "./dist/eslint.d.ts",
+      "import": "./dist/eslint.js"
     }
   },
   "files": [
@@ -99,5 +107,13 @@
   "optionalDependencies": {
     "mongodb": "^7.8.0",
     "pg": "^8.23.1"
+  },
+  "peerDependencies": {
+    "eslint": ">=9"
+  },
+  "peerDependenciesMeta": {
+    "eslint": {
+      "optional": true
+    }
   }
 }

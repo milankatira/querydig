@@ -34,3 +34,20 @@ jobs:
       - run: npx vitest run tests/live
         env:
           QUERYDIG_IT: '1'
+  action:
+    # Runs the repo's own GitHub Action (action.yml) against the sample app.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: qd
+        uses: ./
+        with:
+          path: examples/sample-app
+          fail-on: none
+          diff: ''
+          sarif: 'false'
+          comment: 'false'
+      - name: Check outputs
+        run: |
+          echo "total=${{ steps.qd.outputs.total }} grade=${{ steps.qd.outputs.grade }}"
+          [ "${{ steps.qd.outputs.total }}" -gt 0 ]

@@ -19,7 +19,8 @@ npx querydig            # scan the current directory
 - **Multi-language.** JavaScript, TypeScript, Python, Go, Java, Ruby and PHP.
 - **Multi-database.** MongoDB (Mongoose, native driver, PyMongo/Motor, mongo-go-driver) and SQL (Prisma, TypeORM, Sequelize, pg/mysql2/knex raw, Django ORM, SQLAlchemy, DB-API cursors, GORM/xorm, `database/sql`, Spring Data JPA, Hibernate, JDBC/JdbcTemplate, jOOQ, ActiveRecord, Sequel, Laravel Eloquent/Query Builder, Doctrine, PDO/mysqli). MongoDB also via the Java driver, Spring Data MongoDB, Mongoid and the MongoDB PHP library.
 - **Live evidence (optional).** Point `--uri` at a MongoDB or Postgres replica to confirm full scans, missing and unused indexes, and slow queries.
-- **CI-ready.** `--fail-on`, baselines, `--diff`, SARIF for GitHub code scanning, Markdown for PR comments, HTML report.
+- **CI-ready.** [GitHub Action](#github-action) with PR comments, `--fail-on`, baselines, `--diff`, SARIF for GitHub code scanning, HTML report.
+- **In your editor.** [ESLint plugin](#eslint-plugin) for JS/TS, and an [MCP server](#ai-assistants-mcp-server) so AI assistants can fix and verify queries.
 
 > Requires Node.js 22.12+.
 
@@ -101,6 +102,27 @@ npm i -D querydig
 | SQ010 | medium | SQL | Whole table loaded to iterate (`User.all.each`, `foreach (User::all() …)`, `for (… : repo.findAll())`) |
 
 Built-in noise control: `while`/`for {}` polling loops, batching loops (`skip`/`offset` in the loop), loops over collections or model classes, and array helpers like `arr.find(x => …)` or Python `str.find()` are not flagged.
+
+## ESLint plugin
+
+See findings in your editor as you type, and in any `eslint` CI run (JS/TS only; the CLI covers every language).
+
+```bash
+npm i -D querydig
+```
+
+```js
+// eslint.config.js (ESLint 9+)
+import querydig from 'querydig/eslint';
+
+export default [
+  querydig.configs.recommended,
+  // optional:
+  { rules: { 'querydig/no-slow-queries': ['error', { minSeverity: 'high', disable: ['MQ010'] }] } },
+];
+```
+
+Options: `minSeverity`, `disable` (rule ids), `includeTests` (tests, fixtures, migrations and seeds are skipped by default) and `useConfigFile` (default `true`: rule overrides and `ignore` from `querydig.config.json` apply). `eslint --fix` applies the same safe fixes as `querydig --fix`.
 
 ## AI assistants (MCP server)
 
@@ -274,7 +296,7 @@ on: [pull_request]
 jobs:
   querydig:
     runs-on: ubuntu-latest
-    permissions: { contents: read, security-events: write }
+    permissions: { contents: read, security-events: write, pull-requests: write }
     steps:
       - uses: actions/checkout@v7
       - uses: milankatira/querydig@v0
@@ -282,7 +304,7 @@ jobs:
           fail-on: high          # critical | high | medium | low | none
 ```
 
-On pull requests it scans only the changed files (vs the base branch), uploads findings to code scanning, annotates the diff, writes a Markdown report to the job summary and fails on `fail-on`.
+On pull requests it scans only the changed files (vs the base branch), annotates the diff, posts one PR comment with the report (updated on every push), uploads findings to code scanning and fails on `fail-on`. Code scanning on private repos needs GitHub Advanced Security; without it the upload is skipped and everything else still works.
 
 | Input | Default | |
 |---|---|---|
@@ -293,6 +315,7 @@ On pull requests it scans only the changed files (vs the base branch), uploads f
 | `baseline` | | Baseline file; only new findings count |
 | `sarif` | `true` | Upload to GitHub code scanning (needs `security-events: write`) |
 | `summary` | `true` | Markdown report in the job summary |
+| `comment` | `true` | PR comment with the report (needs `pull-requests: write`); only posted when there are findings, then kept up to date |
 | `uri` | | Read-only DB URI for live evidence, from a secret: `${{ secrets.QUERYDIG_DB_URI }}` |
 | `version` | `latest` | querydig version from npm |
 | `args` | | Extra CLI arguments |
@@ -389,7 +412,6 @@ console.log(summary.bySeverity, summary.grade);
 - Live mode for MySQL (`performance_schema` + `EXPLAIN`).
 - Repo-wide index recommendations and PR comments.
 - Kotlin and C#.
-- `eslint-plugin-querydig` for inline editor warnings.
 - Test-runner mode (Vitest/Jest) to confirm static findings at runtime.
 - Incremental cache.
 

@@ -9,6 +9,7 @@ Drafts and a checklist for announcing querydig. Post them yourself, one channel 
 - [ ] Publish the Action to the GitHub Marketplace: open the release on GitHub → "Publish this Action to the GitHub Marketplace" (needs 2FA and accepting the Marketplace agreement once). Category: Code quality.
 - [ ] Record a 20-second terminal GIF (e.g. with [vhs](https://github.com/charmbracelet/vhs)) of `npx querydig` on the sample app and put it at the top of the README.
 - [ ] Run querydig on 2–3 popular open-source apps. Write down real findings, and send a PR fixing one. That result is the hook for every post below.
+- [ ] Mention the ESLint plugin (`querydig/eslint`) and the PR comment in every post: they are the easiest ways to adopt it.
 - [ ] Submit to MCP directories: mcp.so, Smithery, PulseMCP, Glama (they mostly read the MCP Registry or a GitHub URL).
 
 ## Show HN
