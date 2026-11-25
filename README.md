@@ -79,6 +79,8 @@ npm i -D querydig
 | QD001 | high (critical when nested) | any | Query inside a loop / `.map` / comprehension (N+1) |
 | QD002 | critical | any | Query per row of another query's results (N²) |
 | QD003 | high | any | insert/update/delete inside a loop. Use bulk APIs |
+| QD004 | high | SQL | Lazy-loaded relation in a loop (`b.author.name` without `select_related` / `includes` / `with()` / `JOIN FETCH`): Django, SQLAlchemy, Rails, Laravel, JPA |
+| QD005 | high | any | `new PrismaClient()` / `MongoClient` / `Pool` / `Sequelize` / `DataSource` created inside a handler: a new connection pool per call |
 | MQ001 | high | MongoDB | `find({})` with no limit (full collection scan) |
 | MQ002 | high | MongoDB | Unanchored or case-insensitive `$regex` |
 | MQ003 | high | MongoDB | `$where`, `$function`, `mapReduce` |

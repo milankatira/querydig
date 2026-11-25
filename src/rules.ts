@@ -43,6 +43,26 @@ export const RULES: RuleMeta[] = [
     },
   }),
 
+  r({
+    id: 'QD004', name: 'lazy-load-in-loop', title: 'Lazy-loaded relation inside a loop (N+1)', severity: 'high', db: 'sql',
+    why: 'Reading a relation of each row (book.author.name) makes the ORM run one hidden query per row unless the original query eager-loads it. It is the most common ORM performance problem in Django, Rails, Laravel and Hibernate, and it never shows up as a query call in the code.',
+    fix: 'Eager-load the relation in the original query: select_related / prefetch_related (Django), selectinload / joinedload (SQLAlchemy), includes / preload (Rails), with() (Laravel), JOIN FETCH / @EntityGraph (JPA).',
+    example: {
+      bad: 'books = Book.objects.filter(published=True)\nfor b in books:\n    print(b.author.name)   # 1 query per book',
+      good: "books = Book.objects.filter(published=True).select_related('author')\nfor b in books:\n    print(b.author.name)   # 1 query in total",
+    },
+  }),
+
+  r({
+    id: 'QD005', name: 'client-per-call', title: 'Database client created per call', severity: 'high', db: 'any',
+    why: 'Every PrismaClient / MongoClient / Pool / Sequelize / DataSource opens its own connection pool. Creating one inside a request handler or function multiplies connections until the database refuses new ones (P1001 / "too many connections"), and on serverless every instance does it again.',
+    fix: 'Create the client once at module level (a singleton) and import it wherever you need it.',
+    example: {
+      bad: "export async function GET(req) {\n  const prisma = new PrismaClient();\n  return Response.json(await prisma.user.findMany({ take: 20 }));\n}",
+      good: "// lib/prisma.ts\nexport const prisma = globalThis.prisma ?? new PrismaClient();\nif (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;\n\n// route.ts\nimport { prisma } from '@/lib/prisma';\nexport async function GET() {\n  return Response.json(await prisma.user.findMany({ take: 20 }));\n}",
+    },
+  }),
+
   // ---------- MongoDB ----------
   r({
     id: 'MQ001', name: 'unbounded-find', title: 'Unbounded find with empty filter', severity: 'high', db: 'mongodb',

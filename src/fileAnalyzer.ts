@@ -6,7 +6,7 @@ import { PLUGINS } from './langs/index.js';
 import type { FileResult } from './types.js';
 
 const MAX_BYTES = 1_500_000;
-export const QUICK_FILTER = /find|aggregate|query|execute|Query|Exec|objects|count|Count|update|Update|insert|Insert|delete|Delete|save|Save|create|Create|select|SELECT|First|Take|remove|upsert|distinct|Distinct/;
+export const QUICK_FILTER = /find|aggregate|query|execute|Query|Exec|objects|count|Count|update|Update|insert|Insert|delete|Delete|save|Save|create|Create|select|SELECT|First|Take|remove|upsert|distinct|Distinct|PrismaClient|MongoClient|Pool|Sequelize|DataSource/;
 /** Java/Ruby/PHP ORMs read through short verbs (User.all, ->get(), ->where(), .each) that the filter above misses. */
 const PLUGIN_QUICK_FILTER = /\b(all|get|first|where|paginate|pluck|lazy|chunk|load|flush|each|find_each|exists\?)\b/;
 

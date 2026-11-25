@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { LANGS, type LangSpec } from './languages.js';
 import { PLUGINS, type CallInfo, type LangPlugin } from './langs/index.js';
 import { getParser, type TSNode, type TSTree } from './parser.js';
+import { checkClientPerCall, checkLazyAccess } from './lazy.js';
 import { RULE_MAP } from './rules.js';
 import type { Autofix, Confidence, Db, Finding, LangId, QueryShape, Severity, SortKey } from './types.js';
 
@@ -239,6 +240,7 @@ export class Analyzer {
   findings: Finding[] = [];
   shapes: QueryShape[] = [];
   queryVars = new Set<string>();
+  lazySeen = new Set<string>();
   hasMongo: boolean;
   hasSql: boolean;
   hasMongoose: boolean;
@@ -259,6 +261,9 @@ export class Analyzer {
   run(root: TSNode): Finding[] {
     this.visit(root, { depth: 0, over: false });
     this.plugin?.finish?.(root, this);
+    // a relation that is itself queried (`u.orders.where(...)`) is already reported by QD001-QD003
+    const queried = new Set(this.findings.filter((f) => /^QD00[123]$/.test(f.ruleId)).map((f) => f.line));
+    this.findings = this.findings.filter((f) => f.ruleId !== 'QD004' || !queried.has(f.line));
     return this.applySuppressions();
   }
 
@@ -292,6 +297,8 @@ export class Analyzer {
     const t = node.type;
     if (t === 'comment') return;
     if (this.spec.functions.includes(t)) ctx = { depth: 0, over: false };
+    if (ctx.depth > 0 && ctx.loopVars?.length) checkLazyAccess(this, node, ctx, this.lazySeen);
+    if (t === 'new_expression') checkClientPerCall(this, node);
 
     if (this.spec.loops.includes(t)) return this.visitLoop(node, ctx);
     if (this.spec.call.includes(t)) return this.visitCall(node, ctx);
@@ -531,7 +538,8 @@ export class Analyzer {
       if (def && first && this.spec.lambdas.includes(first.type)) return null; // arr.find(x => ...)
       if (def && (method === 'find' || method === 'findOne') && first && (first.type === 'string' || first.type === 'number')) return null;
     }
-    if (!def) return null;
+    // `toString`, `constructor`… would otherwise resolve to Object.prototype members in the op tables
+    if (!def || typeof def.kind !== 'string' || Object.prototype.hasOwnProperty.call(Object.prototype, method)) return null;
 
     // raw query: require SQL-looking first argument or strong receiver hint
     const firstText = first ? stripQuotes(first.text) : '';
