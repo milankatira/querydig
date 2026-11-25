@@ -44,6 +44,14 @@ jobs:
           os=$(uname -s | tr '[:upper:]' '[:lower:]')
           arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_${os}_${arch}.tar.gz" | tar xz mcp-publisher
+      - name: Wait for the npm version to be visible
+        run: |
+          v=$(node -p 'require("./package.json").version')
+          for i in $(seq 1 30); do
+            [ "$(npm view "querydig@$v" version 2>/dev/null)" = "$v" ] && exit 0
+            sleep 10
+          done
+          echo "querydig@$v not visible on npm after 5 minutes"; exit 1
       - name: Publish to MCP Registry
         run: |
           ./mcp-publisher login github-oidc
