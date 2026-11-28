@@ -3,11 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>querydig: what's your query health grade?</title>
-<meta name="description" content="Zero-config CLI that finds N+1, nested, unbounded and index-hostile MongoDB and SQL queries in JS/TS, Python, Go, Java, Ruby and PHP code. Runs locally and in CI. npx querydig.">
-<meta property="og:title" content="querydig — find slow database queries before production does">
-<meta property="og:description" content="N+1 queries, unbounded reads, unanchored regexes, OFFSET pagination and more. 22 rules, 4 languages, one command: npx querydig.">
+<title>querydig: Find N+1 &amp; Slow Database Queries in Your Code</title>
+<meta name="description" content="Free, open-source CLI that finds N+1, unbounded and slow MongoDB and SQL queries in Prisma, Drizzle, Django, Rails, Laravel and 20+ ORMs. Run npx querydig.">
+<meta property="og:title" content="querydig: find N+1 and slow database queries before production">
+<meta property="og:description" content="N+1 queries, unbounded reads, index-hostile filters and OFFSET pagination. 32 rules, 7 languages, 25+ ORMs, one command: npx querydig.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://milankatira.github.io/querydig/">
+<meta property="og:site_name" content="querydig">
+<meta property="og:image" content="https://milankatira.github.io/querydig/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="querydig: find N+1 and slow database queries before production. npx querydig">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="querydig: find N+1 and slow database queries before production">
+<meta name="twitter:description" content="Open-source CLI for N+1, unbounded and index-hostile queries in Prisma, Drizzle, Django, Rails, Laravel and 20+ ORMs. npx querydig.">
+<meta name="twitter:image" content="https://milankatira.github.io/querydig/assets/og.png">
+<link rel="canonical" href="https://milankatira.github.io/querydig/">
+<link rel="sitemap" type="application/xml" href="sitemap.xml">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
 <meta name="theme-color" content="#000319" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f7f8fb" media="(prefers-color-scheme: light)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23000319'/%3E%3Cellipse cx='14' cy='10' rx='7' ry='3' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M7 10v9c0 1.7 3.1 3 7 3' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M21 10v4' stroke='white' stroke-width='2'/%3E%3Ccircle cx='22' cy='21' r='4' fill='none' stroke='%2334d399' stroke-width='2'/%3E%3Cpath d='m25 24 3 3' stroke='%2334d399' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -25,6 +38,129 @@
     document.documentElement.classList.toggle('dark', t === 'dark');
     document.documentElement.classList.add('js');
   })();
+</script>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "SoftwareApplication",
+ "name": "querydig",
+ "description": "Free, open-source CLI that finds N+1, unbounded and slow MongoDB and SQL queries in JS/TS, Python, Go, Java, Ruby and PHP code, with optional read-only evidence from your database.",
+ "url": "https://milankatira.github.io/querydig/",
+ "applicationCategory": "DeveloperApplication",
+ "operatingSystem": "macOS, Linux, Windows",
+ "softwareVersion": "0.8.0",
+ "license": "https://opensource.org/licenses/MIT",
+ "downloadUrl": "https://www.npmjs.com/package/querydig",
+ "installUrl": "https://www.npmjs.com/package/querydig",
+ "codeRepository": "https://github.com/milankatira/querydig",
+ "programmingLanguage": "TypeScript",
+ "offers": {
+  "@type": "Offer",
+  "price": "0",
+  "priceCurrency": "USD"
+ },
+ "author": {
+  "@type": "Person",
+  "name": "milankatira",
+  "url": "https://github.com/milankatira"
+ }
+}
+</script>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "FAQPage",
+ "mainEntity": [
+  {
+   "@type": "Question",
+   "name": "Does it need access to my database?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "No. By default querydig reads source code only. If you want proof, add --uri with a read-only MongoDB or Postgres connection. It then reads collection sizes, indexes, query plans and slow-query stats to confirm full scans and missing indexes. Queries are planned, never executed, unless you pass --explain-execute."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "What is an N+1 query?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "An N+1 query happens when code runs one query to load a list, then one more query for each item in it: 1 query for 1,000 orders, then 1,000 more for their users. Each is fast alone, but together they multiply round-trips and slow pages down as data grows. querydig flags them as QD001, or QD002 when the loop walks another query's results."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How do I find N+1 queries in Prisma or Drizzle?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Run npx querydig in your project. It flags findUnique, findMany, db.select() and db.query calls inside loops, .map() and Promise.all, and suggests the batched rewrite with include, with or an in filter. Add the GitHub Action or the ESLint plugin to catch new ones in pull requests and in your editor."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How do I find N+1 queries in Django or Rails?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Run npx querydig. It reports querysets and relations used inside loops, such as book.author.name without select_related in Django or without includes in Rails, before code review. It works alongside runtime tools like Bullet or Rails strict_loading, and needs no running app."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Which languages and libraries are supported?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "JavaScript and TypeScript (Prisma, Drizzle, Kysely, Supabase, TypeORM, Sequelize, Mongoose, the MongoDB driver, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) Go (mongo-go-driver, GORM, xorm, database/sql), Java (Spring Data JPA/MongoDB, Hibernate, JDBC, jOOQ), Ruby (ActiveRecord, Mongoid, Sequel) and PHP (Laravel Eloquent, Doctrine, PDO, mysqli). Raw SQL strings are checked in every language."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How noisy is it on a real codebase?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Tests, specs, fixtures, migrations, seeds and benchmarks are skipped by default. Polling and batching loops, loops over collections, and array or string helpers aren't treated as queries. On Gitea (about 2,200 Go files) it reports 16 findings in under a second. To silence one, add // querydig-ignore QD001."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Can it fix issues automatically?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Partly, and only where it's safe. npx querydig --fix adds .lean() to read-only Mongoose queries, turns count() > 0 existence checks into exists() (Django, Rails, Laravel, Spring Data) or a limited count (MongoDB), and switches whole-table loops to find_each / lazy() in Rails and Laravel (preview with --dry-run). With --uri, --emit-indexes writes every missing index to one script for you to review and run. N+1 rewrites and limits change behaviour, so those stay as suggested fixes."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Can my AI assistant use it?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Yes. querydig mcp starts an MCP server for Claude Code, Codex, Cursor, VS Code (Copilot), Windsurf, Claude Desktop, Gemini CLI, Zed and any other MCP client. In Claude Code it is one command: claude mcp add querydig -- npx -y querydig mcp. The assistant can scan, read the code around a finding, check a rewrite before writing it, apply safe fixes and rescan to verify. It runs locally and needs no API key. See AI assistants."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How do I add it to a project that already has hundreds of issues?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Run npx querydig --update-baseline once and commit .querydig-baseline.json. Then run --baseline .querydig-baseline.json --fail-on high in CI, so only newly introduced issues fail the build."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "What do I need installed?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Node.js 22.12 or newer. Run it with npx querydig, or add it as a dev dependency with npm i -D querydig and an npm script."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Is it free?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Yes. It's MIT licensed open source, and there's nothing paid. Issues and pull requests are welcome on GitHub."
+   }
+  }
+ ]
+}
 </script>
 <style>
 /* ---------- Tokens (Kosh design language) ---------- */
@@ -82,7 +218,7 @@ html.dark {
 
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+html { scroll-behavior: smooth; scroll-padding-top: 96px; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-sans);
   font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden;
@@ -158,7 +294,7 @@ html.dark .card { background: rgb(255 255 255 / 0.015); }
 /* ---------- Background: grid + glow ---------- */
 .bg-fx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .bg-grid { position: absolute; inset: 0; background-image: linear-gradient(to right, var(--grid-stroke) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-stroke) 1px, transparent 1px); background-size: 8px 8px; -webkit-mask-image: radial-gradient(ellipse 100% 70% at 50% 0%, #000 30%, transparent 75%); mask-image: radial-gradient(ellipse 100% 70% at 50% 0%, #000 30%, transparent 75%); }
-.bg-glow { position: absolute; left: 50%; width: 820px; max-width: 130vw; height: 520px; transform: translateX(-50%); border-radius: 999px; filter: blur(120px); background: radial-gradient(closest-side, var(--glow), color-mix(in oklab, var(--glow) 30%, transparent) 55%, transparent); }
+.bg-glow { position: absolute; left: 50%; width: 820px; max-width: 130vw; height: 520px; transform: translateX(-50%); border-radius: 999px; background: radial-gradient(closest-side, var(--glow), color-mix(in oklab, var(--glow) 30%, transparent) 55%, transparent 100%); }
 
 /* ---------- Nav ---------- */
 header.nav { position: fixed; inset: 0 0 auto 0; z-index: 50; display: flex; justify-content: center; padding: 16px 16px 0; padding-top: max(16px, env(safe-area-inset-top)); }
@@ -192,7 +328,7 @@ header.nav { position: fixed; inset: 0 0 auto 0; z-index: 50; display: flex; jus
 .ping::before, .ping::after { content: ""; position: absolute; inset: 0; border-radius: 999px; background: var(--pos); }
 .ping::before { animation: ping 1.6s cubic-bezier(0, 0, .2, 1) infinite; opacity: .7; }
 @keyframes ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
-h1.hero-title { margin: 32px 0 0; font: 600 clamp(2.6rem, 8vw, 5.75rem)/0.98 var(--font-display); letter-spacing: -0.035em; text-wrap: balance; }
+h1.hero-title { margin: 32px 0 0; font: 600 clamp(2.4rem, 6.6vw, 5rem)/1.02 var(--font-display); letter-spacing: -0.035em; text-wrap: balance; }
 h1.hero-title .line { display: block; }
 .grad { background: linear-gradient(to bottom, var(--fg), var(--fg) 40%, var(--fg-45)); background-size: 100% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: gradient-y 8s ease infinite; }
 @keyframes gradient-y { 0%, 100% { background-position: 0 0; } 50% { background-position: 0 100%; } }
@@ -256,7 +392,7 @@ h1.hero-title .line { display: block; }
 .sev-card li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; border-radius: 99px; background: var(--fg-25); }
 p code, li code, .lede code { font-size: .88em; padding: 1px 5px; border-radius: 6px; background: var(--fg-5); color: var(--fg-80); }
 .checks li span code { white-space: nowrap; }
-.grade-strip { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.grade-strip { margin-top: 40px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
 .grades { display: flex; gap: 8px; }
 .grades span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--fg-10); font: 600 16px/1 var(--font-display); color: var(--fg-55); }
 .grades span:first-child { background: var(--fg); color: var(--bg); border-color: transparent; }
@@ -320,6 +456,9 @@ p code, li code, .lede code { font-size: .88em; padding: 1px 5px; border-radius:
 .rules { margin-top: 16px; border: 1px solid var(--fg-8); border-radius: 20px; overflow: hidden; }
 .rule { display: grid; grid-template-columns: 72px 1fr auto; gap: 16px; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--fg-8); transition: background-color .2s; }
 .rule:last-child { border-bottom: 0; }
+.rules.collapsed .rule:nth-child(n+9) { display: none; }
+.rules-more { margin: 16px auto 0; display: flex; }
+.rules-more[hidden] { display: none; }
 .rule:hover { background: var(--fg-3); }
 .rule code { font: 500 13px/1 var(--font-mono); color: var(--fg-55); }
 .rule .t { font-size: 15px; font-weight: 500; }
@@ -481,16 +620,48 @@ html.dark .cta-panel { background: rgb(255 255 255 / .015); }
 
 /* ---------- Overflow guards (wide code must scroll, not stretch the page) ---------- */
 .grid > *, .split > *, .steps > *, .hero-inner > *, .head > * { min-width: 0; max-width: 100%; }
+.hero .hero-sub { max-width: 620px; }
 .terminal-wrap, .terminal, .code, .report, .feature-code, .r-find pre { max-width: 100%; }
 .ci-tabs { max-width: 100%; }
 @media (max-width: 520px) { .cmd { font-size: 14px; } .hero-cta { width: 100%; } .hero-cta > * { flex: 1 1 auto; } }
 
+/* ---------- Inline CTA ---------- */
+.inline-cta { margin-top: 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; }
+.inline-cta p { margin: 0; color: var(--fg-65); font-size: 15px; }
+
+/* ---------- Compare ---------- */
+.cmp-wrap { margin-top: 48px; border: 1px solid var(--fg-8); border-radius: 20px; overflow-x: auto; max-width: 100%; }
+.cmp { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px; }
+.cmp th, .cmp td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--fg-8); vertical-align: top; }
+.cmp thead th { font: 500 11px/1.2 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--fg-45); background: var(--fg-3); }
+.cmp tbody tr:last-child th, .cmp tbody tr:last-child td { border-bottom: 0; }
+.cmp tbody th { font: 600 15px/1.3 var(--font-display); white-space: nowrap; }
+.cmp td { color: var(--fg-65); }
+.cmp .y { color: var(--pos); font-weight: 600; }
+.cmp .n { color: var(--fg-25); }
+.cmp tr.us { background: color-mix(in oklab, var(--pos) 7%, transparent); }
+.cmp tr.us th { color: var(--fg); }
+.cmp-note { margin: 14px 4px 0; font-size: 13px; color: var(--fg-45); }
+
+/* ---------- Privacy strip ---------- */
+.privacy.slim { padding: 40px 0; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--fg-8); border-radius: 20px; overflow: hidden; background: var(--fg-3); }
+.fact { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-content: start; padding: 22px; border-right: 1px solid var(--fg-8); }
+.fact .icon { grid-row: span 2; }
+.fact:last-child { border-right: 0; }
+.fact .icon { margin: 0; flex: none; width: 36px; height: 36px; border-radius: 10px; }
+.fact h3 { margin: 0; font: 600 16px/1.3 var(--font-display); }
+.fact p { margin: 4px 0 0; color: var(--fg-55); font-size: 14px; line-height: 1.55; }
+.fact p code { white-space: nowrap; }
+@media (max-width: 800px) { .facts { grid-template-columns: minmax(0, 1fr); } .fact { border-right: 0; border-bottom: 1px solid var(--fg-8); } .fact:last-child { border-bottom: 0; } }
+
 /* ---------- Reveal ---------- */
-html.js .reveal { opacity: 0; filter: blur(8px); transform: translateY(16px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), filter .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); transition-delay: var(--d, 0ms); }
+html.js .reveal { opacity: 0; transform: translate3d(0, 12px, 0); transition: opacity .6s cubic-bezier(.22,.61,.36,1), transform .6s cubic-bezier(.22,.61,.36,1); transition-delay: var(--d, 0ms); }
+html.js .hero .reveal { transition-duration: .8s; }
 html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  html.js .reveal { opacity: 1; filter: none; transform: none; transition: none; }
+  html.js .reveal { opacity: 1; transform: none; transition: none; }
   .marquee-track, .grad, .ping::before, .caret { animation: none !important; }
 }
 </style>
@@ -508,7 +679,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
     </a>
     <div class="nav-links">
       <a href="#features">What it finds</a>
-      <a href="#how">How it works</a>
+      <a href="#compare">Compare</a>
       <a href="#ci">CI</a>
       <a href="#mcp">AI / MCP</a>
       <a href="#rules">Rules</a>
@@ -531,7 +702,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
   </nav>
   <div class="mobile-menu" id="mobileMenu">
     <a href="#features">What it finds</a>
-    <a href="#how">How it works</a>
+    <a href="#compare">Compare</a>
     <a href="#ci">CI</a>
       <a href="#mcp">AI / MCP</a>
     <a href="#rules">Rules</a>
@@ -545,29 +716,29 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 <section class="hero" id="top">
   <div class="bg-fx" aria-hidden="true"><div class="bg-grid"></div><div class="bg-glow"></div></div>
   <div class="wrap hero-inner">
-    <span class="pill reveal"><span class="ping" aria-hidden="true"></span>New: MCP server for AI assistants · Open source · MIT</span>
+    <span class="pill reveal"><span class="ping" aria-hidden="true"></span>New: Drizzle, Kysely and Supabase support · Open source · MIT</span>
     <h1 class="hero-title">
-      <span class="line reveal" style="--d:80ms">What's your</span>
-      <span class="line reveal" style="--d:160ms"><span class="serif grad">query health</span></span>
-      <span class="line reveal" style="--d:240ms">grade?</span>
+      <span class="line reveal" style="--d:80ms">Find N+1 and slow</span>
+      <span class="line reveal" style="--d:160ms">database queries</span>
+      <span class="line reveal" style="--d:240ms"><span class="serif grad">before production.</span></span>
     </h1>
-    <p class="hero-sub reveal" style="--d:320ms">One command grades your codebase from A to F and lists every <strong>N+1 query, write in a loop, unbounded read and index-hostile filter</strong> in your MongoDB and SQL code, ranked from critical to low, with the fix.</p>
+    <p class="hero-sub reveal" style="--d:320ms"><strong>What's your query health grade?</strong> One command scans your JS/TS, Python, Go, Java, Ruby or PHP code, grades it A to F and lists every <strong>N+1 query, write in a loop, unbounded read and index&#8209;hostile filter</strong>, with the fix.</p>
     <div class="hero-cta reveal" style="--d:400ms" id="install">
       <button class="cmd" type="button" data-copy="npx querydig" aria-label="Copy command: npx querydig">
         <span><span class="dollar">$ </span>npx querydig</span>
         <span class="copy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
       </button>
       <a class="btn btn-outline" href="https://github.com/milankatira/querydig" target="_blank" rel="noopener">
-        View on GitHub
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+        Star on GitHub
       </a>
     </div>
-    <p class="hero-meta reveal" style="--d:540ms">No account · No config · No database connection needed</p>
+    <p class="hero-meta reveal" style="--d:540ms">Free &amp; MIT · Runs locally · Works in CI and your AI assistant</p>
 
     <div class="stats reveal" style="--d:560ms">
-      <div class="stat"><b>27</b><span>performance rules</span></div>
+      <div class="stat"><b>32</b><span>performance rules</span></div>
       <div class="stat"><b>7</b><span>languages: JS, TS, Python, Go, Java, Ruby, PHP</span></div>
-      <div class="stat"><b>&lt;1s</b><span>for 2,200+ files</span></div>
+      <div class="stat"><b>&lt;1s</b><span>for 2,200 Go files (Gitea)</span></div>
       <div class="stat"><b>0</b><span>lines of code uploaded</span></div>
     </div>
 
@@ -576,7 +747,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
         <div class="term-bar"><i></i><i></i><i></i><span>~/api — zsh</span></div>
 <pre class="term-body"><span class="t-prompt">❯</span> npx querydig --uri $REPLICA_URI
 
-<span class="t-b">querydig</span> <span class="t-dim">v0.2.0 — slow-query scan of ~/api</span>
+<span class="t-b">querydig</span> <span class="t-dim">v0.8.0 — slow-query scan of ~/api</span>
 <span class="t-dim">412 files in 0.31s</span>
 <span class="t-dim">live: mongodb shop · 18 collections · 64 query plans · 3 slow queries</span>
 
@@ -614,9 +785,9 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
 <section class="section features" id="features">
   <div class="wrap">
     <div class="head">
-      <span class="eyebrow reveal">What it finds</span>
-      <h2 class="h2 reveal" style="--d:60ms">The query patterns that <span class="serif">quietly</span> melt databases.</h2>
-      <p class="lede reveal" style="--d:120ms">They pass code review, work fine on a laptop with 50 rows, and fall over at 5 million. querydig catches them from the source code, before they ship.</p>
+      <span class="eyebrow reveal">N+1 query detection</span>
+      <h2 class="h2 reveal" style="--d:60ms">The N+1 and slow query patterns that <span class="serif">quietly</span> melt databases.</h2>
+      <p class="lede reveal" style="--d:120ms">They pass code review, work fine on a laptop with 50 rows, and fall over at 5 million. querydig catches them in Prisma, Drizzle, Django, Rails, Laravel and 20+ other ORMs, straight from the source code, before they ship.</p>
     </div>
     <div class="grid g3">
       <article class="card reveal">
@@ -640,7 +811,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
         <span class="tag sev-high"><span class="dot"></span>high</span>
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></div>
         <h3>Unbounded reads</h3>
-        <p><code>find({})</code>, <code>findMany()</code>, <code>objects.all()</code> or <code>db.Find(&amp;rows)</code> with no filter and no limit read the whole table, and get slower every day.</p>
+        <p><code>find({})</code>, <code>findMany()</code>, <code>db.select().from(t)</code>, <code>objects.all()</code> or <code>supabase.from(t).select()</code> with no filter and no limit read the whole table, and get slower every day.</p>
 <div class="feature-code"><span class="bad">const all = await prisma.user.findMany()</span></div>
       </article>
       <article class="card reveal">
@@ -674,7 +845,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
   <div class="wrap">
     <div class="head center">
       <span class="eyebrow reveal">Every finding comes with a fix</span>
-      <h2 class="h2 reveal" style="--d:60ms">Not just <span class="serif">what</span> is slow. How to make it fast.</h2>
+      <h2 class="h2 reveal" style="--d:60ms">Every slow query comes with the <span class="serif">fix</span>.</h2>
       <p class="lede reveal" style="--d:120ms">querydig explains the cost in plain words and shows the rewrite. Here's the most common one it finds: a query per row.</p>
     </div>
     <div class="ba reveal" style="--d:160ms">
@@ -701,62 +872,12 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
       <div><b>2</b><span>queries for 1,000 orders, after</span></div>
       <div><b>Same</b><span>result, no schema change</span></div>
     </div>
-  </div>
-</section>
-
-<!-- ============ SEVERITY ============ -->
-<section class="section" id="severity">
-  <div class="wrap">
-    <div class="head">
-      <span class="eyebrow reveal">Severity</span>
-      <h2 class="h2 reveal" style="--d:60ms">Fix the <span class="serif">right</span> thing first.</h2>
-      <p class="lede reveal" style="--d:120ms">Every finding gets a severity from what it costs at scale, not a style preference. Loop depth and data flow raise it automatically.</p>
-    </div>
-    <div class="grid g4 sev-grid">
-      <article class="card sev-card sev-critical reveal">
-        <div class="bar"></div>
-        <h3><span style="color:var(--fg)">Critical</span><small>fix now</small></h3>
-        <ul><li>A query per row of another query's results</li><li>N+1 nested two or more loops deep</li></ul>
-      </article>
-      <article class="card sev-card sev-high reveal" style="--d:60ms">
-        <div class="bar"></div>
-        <h3><span style="color:var(--fg)">High</span><small>this sprint</small></h3>
-        <ul><li>Queries and writes inside loops</li><li>Full collection or table reads</li><li>Unanchored regex, <code>LIKE '%x'</code></li></ul>
-      </article>
-      <article class="card sev-card sev-medium reveal" style="--d:120ms">
-        <div class="bar"></div>
-        <h3><span style="color:var(--fg)">Medium</span><small>plan it</small></h3>
-        <ul><li><code>skip()</code> and <code>OFFSET</code> paging</li><li>Sort without limit</li><li>Late <code>$match</code>, non-sargable WHERE</li></ul>
-      </article>
-      <article class="card sev-card sev-low reveal" style="--d:180ms">
-        <div class="bar"></div>
-        <h3><span style="color:var(--fg)">Low</span><small>when touching it</small></h3>
-        <ul><li>Missing projection, <code>SELECT *</code></li><li>Missing <code>.lean()</code></li><li><code>count</code> used as an exists check</li></ul>
-      </article>
-    </div>
-    <div class="card grade-strip reveal">
-      <div>
-        <h3>One query-health grade per repo</h3>
-        <p style="margin-top:6px">A score from 0 to 100, adjusted for repo size, so you can track whether things are improving.</p>
-      </div>
-      <div class="grades" aria-label="Grades A to F"><span>A</span><span>B</span><span>C</span><span>D</span><span>F</span></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ HOW IT WORKS ============ -->
-<section class="section" id="how">
-  <div class="wrap">
-    <div class="head center">
-      <span class="eyebrow reveal">How it works</span>
-      <h2 class="h2 reveal" style="--d:60ms">From source code to a <span class="serif">fix list</span> in four steps.</h2>
-      <p class="lede reveal" style="--d:120ms">No agents, no proxies, no query logs. Just your repository.</p>
-    </div>
-    <div class="steps">
-      <article class="card step reveal"><div class="step-num">01</div><h3>Parse</h3><p>Every JS, TS, Python, Go, Java, Ruby and PHP file is parsed with tree-sitter in a pool of worker threads. Your <code>.gitignore</code> is respected.</p></article>
-      <article class="card step reveal" style="--d:60ms"><div class="step-num">02</div><h3>Recognise</h3><p>Calls to Mongoose, Prisma, Django, GORM and a dozen other ORMs and drivers become query records, along with their filters, limits and chained calls.</p></article>
-      <article class="card step reveal" style="--d:120ms"><div class="step-num">03</div><h3>Trace</h3><p>Loop depth, iterating callbacks and variables that hold query results are tracked to tell a real N+1 from a batch job.</p></article>
-      <article class="card step reveal" style="--d:180ms"><div class="step-num">04</div><h3>Report</h3><p>Findings are ranked by severity, each with the code, why it's slow and how to fix it, in the format your team reads.</p></article>
+    <div class="inline-cta reveal">
+      <p>Find these in your own repo, in about a second:</p>
+      <button class="cmd" type="button" data-copy="npx querydig" aria-label="Copy command: npx querydig">
+        <span><span class="dollar">$ </span>npx querydig</span>
+        <span class="copy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+      </button>
     </div>
   </div>
 </section>
@@ -766,7 +887,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
   <div class="wrap split">
     <div class="head">
       <span class="eyebrow reveal">Reports</span>
-      <h2 class="h2 reveal" style="--d:60ms">A report your team will <span class="serif">actually</span> open.</h2>
+      <h2 class="h2 reveal" style="--d:60ms">A query report your team will <span class="serif">actually</span> open.</h2>
       <p class="lede reveal" style="--d:120ms">Add <code>--format html</code> and you get one self-contained file to share or attach to a ticket. It has filters by severity, rule, database and file, and a before/after example on every finding.</p>
       <ul class="checks reveal" style="--d:180ms">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><b>Exact location</b>: file, line and the code itself.</span></li>
@@ -784,6 +905,15 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
       <figcaption>The actual report for the <a href="https://github.com/milankatira/querydig/tree/main/examples/sample-app" target="_blank" rel="noopener">sample app</a> in the repo.</figcaption>
     </figure>
   </div>
+  <div class="wrap">
+    <div class="card grade-strip reveal">
+      <div>
+        <h3>One query health grade per repo, A to F</h3>
+        <p style="margin-top:6px">A score from 0 to 100, adjusted for repo size, so you can track whether things are improving.</p>
+      </div>
+      <div class="grades" aria-label="Grades A to F"><span>A</span><span>B</span><span>C</span><span>D</span><span>F</span></div>
+    </div>
+  </div>
 </section>
 
 <!-- ============ CI ============ -->
@@ -792,7 +922,7 @@ html.js .reveal.in { opacity: 1; filter: none; transform: none; }
     <div class="head">
       <span class="eyebrow reveal">CI / CD</span>
       <h2 class="h2 reveal" style="--d:60ms">Stop slow queries at the <span class="serif">pull request</span>.</h2>
-      <p class="lede reveal" style="--d:120ms">Add one step to any pipeline. Existing issues go into a baseline, so only new ones fail the build and the team can fix the backlog at its own pace.</p>
+      <p class="lede reveal" style="--d:120ms">Add the GitHub Action, or one step in GitLab CI or any other pipeline. Existing issues go into a baseline, so only new ones fail the build and the team can fix the backlog at its own pace.</p>
       <ul class="checks reveal" style="--d:180ms">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><code>--fail-on high</code> exits with code 1 on high or critical findings.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span><code>--baseline</code> lets known issues through, so you only gate on new ones.</span></li>
@@ -853,8 +983,8 @@ npx -y querydig --format html -o querydig-report.html</pre>
   <div class="mcp-glow" aria-hidden="true"></div>
   <div class="wrap">
     <div class="head center">
-      <span class="eyebrow reveal">AI assistants · MCP <span class="new-badge">New in 0.5</span></span>
-      <h2 class="h2 reveal" style="--d:60ms">Your AI assistant finds slow queries, <span class="serif">fixes</span> them, and proves it.</h2>
+      <span class="eyebrow reveal">MCP server for AI assistants</span>
+      <h2 class="h2 reveal" style="--d:60ms">Claude, Cursor and Copilot fix slow queries. querydig <span class="serif">proves</span> it.</h2>
       <p class="lede reveal" style="--d:120ms"><code>querydig mcp</code> is a <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server. querydig does the detection and verification; your assistant does the rewrite. No API key, and your code never leaves your machine.</p>
       <div class="mcp-works reveal" style="--d:180ms" aria-label="Works with"><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true" class="lg-claude"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg>Claude Code</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>Codex</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg>Cursor</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.922 16.997C23.061 18.492 18.063 22.02 12 22.02 5.937 22.02.939 18.492.078 16.997A.641.641 0 0 1 0 16.741v-2.869a.883.883 0 0 1 .053-.22c.372-.935 1.347-2.292 2.605-2.656.167-.429.414-1.055.644-1.517a10.098 10.098 0 0 1-.052-1.086c0-1.331.282-2.499 1.132-3.368.397-.406.89-.717 1.474-.952C7.255 2.937 9.248 1.98 11.978 1.98c2.731 0 4.767.957 6.166 2.093.584.235 1.077.546 1.474.952.85.869 1.132 2.037 1.132 3.368 0 .368-.014.733-.052 1.086.23.462.477 1.088.644 1.517 1.258.364 2.233 1.721 2.605 2.656a.841.841 0 0 1 .053.22v2.869a.641.641 0 0 1-.078.256Zm-11.75-5.992h-.344a4.359 4.359 0 0 1-.355.508c-.77.947-1.918 1.492-3.508 1.492-1.725 0-2.989-.359-3.782-1.259a2.137 2.137 0 0 1-.085-.104L4 11.746v6.585c1.435.779 4.514 2.179 8 2.179 3.486 0 6.565-1.4 8-2.179v-6.585l-.098-.104s-.033.045-.085.104c-.793.9-2.057 1.259-3.782 1.259-1.59 0-2.738-.545-3.508-1.492a4.359 4.359 0 0 1-.355-.508Zm2.328 3.25c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm-5 0c.549 0 1 .451 1 1v2c0 .549-.451 1-1 1-.549 0-1-.451-1-1v-2c0-.549.451-1 1-1Zm3.313-6.185c.136 1.057.403 1.913.878 2.497.442.544 1.134.938 2.344.938 1.573 0 2.292-.337 2.657-.751.384-.435.558-1.15.558-2.361 0-1.14-.243-1.847-.705-2.319-.477-.488-1.319-.862-2.824-1.025-1.487-.161-2.192.138-2.533.529-.269.307-.437.808-.438 1.578v.021c0 .265.021.562.063.893Zm-1.626 0c.042-.331.063-.628.063-.894v-.02c-.001-.77-.169-1.271-.438-1.578-.341-.391-1.046-.69-2.533-.529-1.505.163-2.347.537-2.824 1.025-.462.472-.705 1.179-.705 2.319 0 1.211.175 1.926.558 2.361.365.414 1.084.751 2.657.751 1.21 0 1.902-.394 2.344-.938.475-.584.742-1.44.878-2.497Z"/></svg>VS Code</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.55 5.067c-1.2038-.002-2.1806.973-2.1806 2.1765v4.8676c0 .972-.8035 1.7594-1.7597 1.7594-.568 0-1.1352-.286-1.4718-.7659l-4.9713-7.1003c-.4125-.5896-1.0837-.941-1.8103-.941-1.1334 0-2.1533.9635-2.1533 2.153v4.8957c0 .972-.7969 1.7594-1.7596 1.7594-.57 0-1.1363-.286-1.4728-.7658L.4076 5.1598C.2822 4.9798 0 5.0688 0 5.2882v4.2452c0 .2147.0656.4228.1884.599l5.4748 7.8183c.3234.462.8006.8052 1.3509.9298 1.3771.313 2.6446-.747 2.6446-2.0977v-4.893c0-.972.7875-1.7593 1.7596-1.7593h.003a1.798 1.798 0 0 1 1.4718.7658l4.9723 7.0994c.4135.5905 1.05.941 1.8093.941 1.1587 0 2.1515-.9645 2.1515-2.153v-4.8948c0-.972.7875-1.7594 1.7596-1.7594h.194a.22.22 0 0 0 .2204-.2202v-4.622a.22.22 0 0 0-.2203-.2203Z"/></svg>Windsurf</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gemG" x1="0" y1="24" x2="24" y2="0"><stop offset="0" stop-color="#1c7dff"/><stop offset=".55" stop-color="#9b72f2"/><stop offset="1" stop-color="#f2a3c9"/></linearGradient></defs><path fill="url(#gemG)" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg>Gemini CLI</span><span class="mcp-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.25 1.5a.75.75 0 0 0-.75.75v16.5H0V2.25A2.25 2.25 0 0 1 2.25 0h20.095c1.002 0 1.504 1.212.795 1.92L10.764 14.298h3.486V12.75h1.5v1.922a1.125 1.125 0 0 1-1.125 1.125H9.264l-2.578 2.578h11.689V9h1.5v9.375a1.5 1.5 0 0 1-1.5 1.5H5.185L2.562 22.5H21.75a.75.75 0 0 0 .75-.75V5.25H24v16.5A2.25 2.25 0 0 1 21.75 24H1.655C.653 24 .151 22.788.86 22.08L13.19 9.75H9.75v1.5h-1.5V9.375A1.125 1.125 0 0 1 9.375 8.25h5.314l2.625-2.625H5.625V15h-1.5V5.625a1.5 1.5 0 0 1 1.5-1.5h13.19L21.438 1.5z"/></svg>Zed</span></div>
     </div>
@@ -1047,46 +1177,43 @@ codex mcp add querydig -- npx -y querydig mcp
       </li>
     </ol>
 
-    <div class="mcp-demo">
-      <div class="mcp-demo-copy reveal">
-        <span class="eyebrow">One prompt</span>
-        <h3 class="mcp-h3">The whole loop, on <span class="serif">autopilot</span>.</h3>
-        <p>The built-in <code>optimize_queries</code> prompt scans, applies safe fixes, rewrites the worst findings one at a time, verifies each with querydig, and ends with a before/after table. Every claim is checked by the analyser, not taken on the model's word.</p>
-        <button class="cmd mcp-cmd" type="button" data-copy="/mcp__querydig__optimize_queries" aria-label="Copy command: /mcp__querydig__optimize_queries">
-          <span><span class="dollar">&gt; </span>/mcp__querydig__optimize_queries</span>
-          <span class="copy" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
-        </button>
-      </div>
-      <div class="mcp-chat reveal" style="--d:120ms" role="img" aria-label="Example session: the assistant scans, rewrites an N+1 query, verifies it and raises the grade from C to B">
-        <div class="mcp-bar"><i></i><i></i><i></i><span>Example session</span></div>
-        <div class="mcp-msgs">
-          <div class="msg you">Find the slow queries in this repo and fix them.</div>
-          <div class="msg tool"><span class="tl">querydig</span> scan_queries <span class="res">2 critical · 7 high · grade <b class="g-c">C</b></span></div>
-          <div class="msg tool"><span class="tl">querydig</span> get_finding_context <span class="res">orders.service.ts:42</span></div>
-          <div class="msg ai"><code>Order.find()</code> runs once per user, an N+1. I'll batch it into a single <code>$in</code> query.</div>
-          <div class="msg tool"><span class="tl">querydig</span> analyze_snippet <span class="res ok">no findings ✓</span></div>
-          <div class="msg tool"><span class="tl">querydig</span> apply_safe_fixes <span class="res">4 fixes · .lean(), exists()</span></div>
-          <div class="msg tool"><span class="tl">querydig</span> scan_queries <span class="res ok">QD001 resolved ✓</span></div>
-          <div class="msg ai">Done: 5 queries fixed and verified. Grade <b class="g-c">C</b> → <b class="g-b">B</b>.</div>
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 
 <!-- ============ PRIVACY ============ -->
-<section class="section privacy" id="privacy">
+<section class="section privacy slim" id="privacy">
+  <div class="wrap">
+    <h2 class="sr-only">Local-first and private by default</h2>
+    <div class="facts reveal">
+      <div class="fact"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Nothing uploaded</h3><p>No telemetry, account or API key. Your code never leaves your machine.</p></div>
+      <div class="fact" style="--d:60ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="m2 2 20 20"/></svg></div><h3>Database optional, read-only</h3><p>Findings come from source code. <code>--uri</code> only reads plans and stats, never data.</p></div>
+      <div class="fact" style="--d:120ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></div><h3>Fully open source</h3><p>MIT licensed. Every rule is plain TypeScript you can read or switch off.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPARE ============ -->
+<section class="section" id="compare">
   <div class="wrap">
     <div class="head center">
-      <span class="eyebrow reveal">Local-first</span>
-      <h2 class="h2 reveal" style="--d:60ms">Your code never <span class="serif">leaves</span> your machine.</h2>
-      <p class="lede reveal" style="--d:120ms">querydig is a static analyser that runs locally. It makes no network calls of its own, and database access is strictly opt-in.</p>
+      <span class="eyebrow reveal">Alternatives</span>
+      <h2 class="h2 reveal" style="--d:60ms">How querydig <span class="serif">compares</span>.</h2>
+      <p class="lede reveal" style="--d:120ms">Runtime detectors like Bullet and nplusone only see the code paths your tests run, in one framework. querydig reads every file, in seven languages, and fits in a pull request check. Many teams use both.</p>
     </div>
-    <div class="grid g3">
-      <article class="card reveal"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Nothing uploaded</h3><p>No telemetry, no account, no API key. It works the same on a plane as in CI.</p></article>
-      <article class="card reveal" style="--d:60ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="m2 2 20 20"/></svg></div><h3>Database optional, read-only</h3><p>Findings come from your source code. Point <code>--uri</code> at a replica for live evidence: plans and stats only, in read-only sessions, with passwords redacted.</p></article>
-      <article class="card reveal" style="--d:120ms"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg></div><h3>Fully open source</h3><p>MIT licensed. Every rule is plain TypeScript you can read, change or switch off.</p></article>
+    <div class="cmp-wrap reveal">
+      <table class="cmp">
+        <thead><tr><th scope="col">Tool</th><th scope="col">How it works</th><th scope="col">Languages / ORMs</th><th scope="col">N+1</th><th scope="col">MongoDB</th><th scope="col">Live DB evidence</th><th scope="col">Auto-fix</th><th scope="col">MCP</th></tr></thead>
+        <tbody>
+<tr class="us"><th scope="row">querydig</th><td>Static: reads the code. Database optional</td><td>JS/TS, Python, Go, Java, Ruby, PHP; 25+ ORMs and drivers</td><td class="y">Yes, incl. N²</td><td class="y">Yes</td><td>MongoDB, Postgres</td><td class="y">Yes</td><td class="y">Yes</td></tr>
+<tr><th scope="row">Bullet</th><td>Runtime, while the app or tests run</td><td>Rails (ActiveRecord, Mongoid)</td><td class="y">Yes</td><td class="y">Yes</td><td class="n">No</td><td class="n">No</td><td class="n">No</td></tr>
+<tr><th scope="row">nplusone</th><td>Runtime</td><td>Django, SQLAlchemy</td><td class="y">Yes</td><td class="n">No</td><td class="n">No</td><td class="n">No</td><td class="n">No</td></tr>
+<tr><th scope="row">Prisma Optimize</th><td>Runtime, Prisma only; sunset announced Mar 2026</td><td>Prisma</td><td class="y">Yes</td><td class="n">No</td><td>Prisma Postgres only</td><td class="n">No</td><td class="n">No</td></tr>
+<tr><th scope="row">EagerEye</th><td>Static</td><td>Rails</td><td class="y">Yes</td><td class="n">No</td><td class="n">No</td><td class="n">No</td><td class="n">No</td></tr>
+<tr><th scope="row">sqlfluff</th><td>Static: lint and style for .sql files</td><td>SQL files</td><td class="n">No</td><td class="n">No</td><td class="n">No</td><td class="y">Yes</td><td class="n">No</td></tr>
+        </tbody>
+      </table>
     </div>
+    <p class="cmp-note">Based on each project's public documentation, November 2026. Prisma Optimize: see Prisma's <a href="https://www.prisma.io/blog/sunsetting-prisma-optimize" target="_blank" rel="noopener">sunset announcement</a>.</p>
   </div>
 </section>
 
@@ -1095,7 +1222,7 @@ codex mcp add querydig -- npx -y querydig mcp
   <div class="wrap">
     <div class="head">
       <span class="eyebrow reveal">Rules</span>
-      <h2 class="h2 reveal" style="--d:60ms">27 rules, each with a <span class="serif">why</span> and a fix.</h2>
+      <h2 class="h2 reveal" style="--d:60ms">32 rules for N+1, slow and <span class="serif">unindexed</span> queries.</h2>
       <p class="lede reveal" style="--d:120ms">Live rules (LV) need <code>--uri</code>. Run <code>npx querydig explain &lt;RULE&gt;</code> for a before/after example. Change a rule's severity or switch it off in <code>querydig.config.json</code>.</p>
     </div>
     <div class="rules-toolbar reveal">
@@ -1108,7 +1235,8 @@ codex mcp add querydig -- npx -y querydig mcp
       </div>
       <span class="rules-count" id="rulesCount"></span>
     </div>
-    <div class="rules reveal" id="rulesList"></div>
+    <div class="rules collapsed reveal" id="rulesList"></div>
+    <button class="btn btn-outline btn-sm rules-more" type="button" id="rulesMore" aria-controls="rulesList" aria-expanded="false">Show all rules</button>
   </div>
 </section>
 
@@ -1123,7 +1251,10 @@ codex mcp add querydig -- npx -y querydig mcp
     </div>
     <div class="faq reveal">
       <details open><summary>Does it need access to my database?</summary><p>No. By default querydig reads source code only. If you want proof, add <code>--uri</code> with a read-only MongoDB or Postgres connection. It then reads collection sizes, indexes, query plans and slow-query stats to confirm full scans and missing indexes. Queries are planned, never executed, unless you pass <code>--explain-execute</code>.</p></details>
-      <details><summary>Which languages and libraries are supported?</summary><p>JavaScript and TypeScript (Mongoose, the MongoDB driver, Prisma, TypeORM, Sequelize, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) Go (mongo-go-driver, GORM, xorm, <code>database/sql</code>), Java (Spring Data JPA/MongoDB, Hibernate, JDBC, jOOQ), Ruby (ActiveRecord, Mongoid, Sequel) and PHP (Laravel Eloquent, Doctrine, PDO, mysqli). Raw SQL strings are checked in every language.</p></details>
+      <details><summary>What is an N+1 query?</summary><p>An N+1 query happens when code runs one query to load a list, then one more query for each item in it: 1 query for 1,000 orders, then 1,000 more for their users. Each is fast alone, but together they multiply round-trips and slow pages down as data grows. querydig flags them as QD001, or QD002 when the loop walks another query's results.</p></details>
+      <details><summary>How do I find N+1 queries in Prisma or Drizzle?</summary><p>Run <code>npx querydig</code> in your project. It flags <code>findUnique</code>, <code>findMany</code>, <code>db.select()</code> and <code>db.query</code> calls inside loops, <code>.map()</code> and <code>Promise.all</code>, and suggests the batched rewrite with <code>include</code>, <code>with</code> or an <code>in</code> filter. Add the GitHub Action or the ESLint plugin to catch new ones in pull requests and in your editor.</p></details>
+      <details><summary>How do I find N+1 queries in Django or Rails?</summary><p>Run <code>npx querydig</code>. It reports querysets and relations used inside loops, such as <code>book.author.name</code> without <code>select_related</code> in Django or without <code>includes</code> in Rails, before code review. It works alongside runtime tools like Bullet or Rails <code>strict_loading</code>, and needs no running app.</p></details>
+      <details><summary>Which languages and libraries are supported?</summary><p>JavaScript and TypeScript (Prisma, Drizzle, Kysely, Supabase, TypeORM, Sequelize, Mongoose, the MongoDB driver, pg, mysql2, knex raw), Python (PyMongo, Motor, Django ORM, SQLAlchemy, DB-API cursors) Go (mongo-go-driver, GORM, xorm, <code>database/sql</code>), Java (Spring Data JPA/MongoDB, Hibernate, JDBC, jOOQ), Ruby (ActiveRecord, Mongoid, Sequel) and PHP (Laravel Eloquent, Doctrine, PDO, mysqli). Raw SQL strings are checked in every language.</p></details>
       <details><summary>How noisy is it on a real codebase?</summary><p>Tests, specs, fixtures, migrations, seeds and benchmarks are skipped by default. Polling and batching loops, loops over collections, and array or string helpers aren't treated as queries. On Gitea (about 2,200 Go files) it reports 16 findings in under a second. To silence one, add <code>// querydig-ignore QD001</code>.</p></details>
       <details><summary>Can it fix issues automatically?</summary><p>Partly, and only where it's safe. <code>npx querydig --fix</code> adds <code>.lean()</code> to read-only Mongoose queries, turns <code>count() &gt; 0</code> existence checks into <code>exists()</code> (Django, Rails, Laravel, Spring Data) or a limited count (MongoDB), and switches whole-table loops to <code>find_each</code> / <code>lazy()</code> in Rails and Laravel (preview with <code>--dry-run</code>). With <code>--uri</code>, <code>--emit-indexes</code> writes every missing index to one script for you to review and run. N+1 rewrites and limits change behaviour, so those stay as suggested fixes.</p></details>
       <details><summary>Can my AI assistant use it?</summary><p>Yes. <code>querydig mcp</code> starts an MCP server for Claude Code, Codex, Cursor, VS Code (Copilot), Windsurf, Claude Desktop, Gemini CLI, Zed and any other MCP client. In Claude Code it is one command: <code>claude mcp add querydig -- npx -y querydig mcp</code>. The assistant can scan, read the code around a finding, check a rewrite before writing it, apply safe fixes and rescan to verify. It runs locally and needs no API key. See <a href="#mcp">AI assistants</a>.</p></details>
@@ -1172,7 +1303,7 @@ codex mcp add querydig -- npx -y querydig mcp
       </div>
       <nav class="foot-col" aria-label="Product">
         <h4>Product</h4>
-        <ul><li><a href="#features">What it finds</a></li><li><a href="#fix">Fix examples</a></li><li><a href="#severity">Severity levels</a></li><li><a href="#rules">All rules</a></li></ul>
+        <ul><li><a href="#features">What it finds</a></li><li><a href="#fix">Fix examples</a></li><li><a href="#reports">Reports and grades</a></li><li><a href="#compare">Compare alternatives</a></li><li><a href="#rules">All rules</a></li></ul>
       </nav>
       <nav class="foot-col" aria-label="Guides">
         <h4>Guides</h4>
@@ -1266,7 +1397,7 @@ codex mcp add querydig -- npx -y querydig mcp
   })();
 
   // ---------- libraries marquee ----------
-  var LIBS = [['Mongoose', 'js'], ['MongoDB driver', 'js'], ['Prisma', 'ts'], ['TypeORM', 'ts'], ['Sequelize', 'js'], ['pg', 'js'], ['mysql2', 'js'], ['knex', 'js'], ['PyMongo', 'py'], ['Motor', 'py'], ['Django ORM', 'py'], ['SQLAlchemy', 'py'], ['mongo-go-driver', 'go'], ['GORM', 'go'], ['xorm', 'go'], ['database/sql', 'go']];
+  var LIBS = [['Prisma', 'ts'], ['Drizzle', 'ts'], ['Kysely', 'ts'], ['Supabase', 'ts'], ['Mongoose', 'js'], ['TypeORM', 'ts'], ['Sequelize', 'js'], ['MongoDB driver', 'js'], ['pg', 'js'], ['knex', 'js'], ['Django ORM', 'py'], ['SQLAlchemy', 'py'], ['PyMongo', 'py'], ['GORM', 'go'], ['database/sql', 'go'], ['mongo-go-driver', 'go'], ['Spring Data', 'java'], ['Hibernate', 'java'], ['jOOQ', 'java'], ['ActiveRecord', 'rb'], ['Mongoid', 'rb'], ['Eloquent', 'php'], ['Doctrine', 'php']];
   var html = LIBS.map(function (l) { return '<span class="lib">' + l[0] + ' <small>' + l[1] + '</small></span>'; }).join('');
   document.getElementById('libTrack').innerHTML = html;
   document.getElementById('libTrack2').innerHTML = html;
@@ -1276,6 +1407,8 @@ codex mcp add querydig -- npx -y querydig mcp
     ['QD001', 'Query inside a loop (N+1)', 'One round-trip per item from a for loop, .map() or comprehension.', 'high', 'any'],
     ['QD002', 'Nested query over results (N²)', "A query per row of another query's results.", 'critical', 'any'],
     ['QD003', 'Write operation inside a loop', 'insert, update or delete per item instead of a bulk API.', 'high', 'any'],
+    ['QD004', 'Lazy-loaded relation in a loop', 'b.author.name without select_related / includes / with() / JOIN FETCH.', 'high', 'sql'],
+    ['QD005', 'Database client per call', 'new PrismaClient() / MongoClient / Pool inside a handler: a new pool every request.', 'high', 'any'],
     ['MQ001', 'Unbounded find', 'find({}) with no limit reads the whole collection.', 'high', 'mongodb'],
     ['MQ002', 'Unanchored or case-insensitive $regex', 'Only /^prefix/ regexes use an index efficiently.', 'high', 'mongodb'],
     ['MQ003', '$where / $function / mapReduce', 'Server-side JavaScript runs per document with no index.', 'high', 'mongodb'],
@@ -1287,7 +1420,7 @@ codex mcp add querydig -- npx -y querydig mcp
     ['MQ009', '$ne / $nin / $not filters', 'Negations are not selective.', 'low', 'mongodb'],
     ['MQ010', 'find() without projection', 'Transfers whole documents; no covered queries.', 'low', 'mongodb'],
     ['MQ011', 'Mongoose read without .lean()', 'Hydrating documents is slower for read-only paths.', 'low', 'mongodb'],
-    ['SQ001', 'Unbounded ORM read', 'findMany() / findAll() / objects.all() with no where or limit.', 'high', 'sql'],
+    ['SQ001', 'Unbounded ORM read', 'findMany() / select().from() / objects.all() / supabase.from().select() with no where or limit.', 'high', 'sql'],
     ['SQ002', 'SELECT *', 'Reads every column and prevents index-only scans.', 'low', 'sql'],
     ['SQ003', "LIKE '%term'", 'A leading wildcard cannot use a B-tree index.', 'high', 'sql'],
     ['SQ004', 'Missing WHERE', 'UPDATE/DELETE with no WHERE, or an unbounded SELECT.', 'high', 'sql'],
@@ -1295,6 +1428,9 @@ codex mcp add querydig -- npx -y querydig mcp
     ['SQ006', 'Function on a column in WHERE', 'LOWER(col) = ? is non-sargable.', 'medium', 'sql'],
     ['SQ007', 'ORDER BY RAND()', 'Sorts the whole table to pick a few rows.', 'high', 'sql'],
     ['SQ008', 'NOT IN (subquery)', 'Often a nested loop; prefer NOT EXISTS.', 'medium', 'sql'],
+    ['SQ009', 'count() as an exists check', 'Counts every row when you only need to know if one exists.', 'low', 'sql'],
+    ['SQ010', 'Whole table loaded to iterate', 'User.all.each, foreach (Model::all()), findAll() loops: use batches.', 'medium', 'sql'],
+    ['SQ011', 'Deeply nested include / with', 'Prisma include or Drizzle with nested 3+ levels on a list query.', 'medium', 'sql'],
     ['LV001', 'Full collection / table scan', 'Live plan shows COLLSCAN / Seq Scan on 10k+ rows; gives the exact index.', 'high', 'live'],
     ['LV002', 'In-memory sort', 'Live plan has a blocking SORT stage.', 'medium', 'live'],
     ['LV003', 'Slow query in production', 'From the MongoDB profiler or pg_stat_statements, traced to the code line.', 'high', 'live'],
@@ -1311,7 +1447,14 @@ codex mcp add querydig -- npx -y querydig mcp
         '<div class="meta"><span class="tag sev-' + r[3] + '"><span class="dot"></span>' + r[3] + '</span><span class="tag">' + DBL[r[4]] + '</span></div></div>';
     }).join('');
     count.textContent = rows.length + ' rules';
+    more.hidden = rows.length <= 8 || !list.classList.contains('collapsed');
   }
+  var more = document.getElementById('rulesMore');
+  more.addEventListener('click', function () {
+    list.classList.remove('collapsed');
+    more.setAttribute('aria-expanded', 'true');
+    more.hidden = true;
+  });
   renderRules('all');
   document.querySelectorAll('.filter button').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -1321,7 +1464,8 @@ codex mcp add querydig -- npx -y querydig mcp
   });
 
   // ---------- reveal on scroll ----------
-  var els = document.querySelectorAll('.reveal');
+  document.querySelectorAll('.hero .reveal').forEach(function (e) { e.classList.add('in'); });
+  var els = document.querySelectorAll('.reveal:not(.in)');
   if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
