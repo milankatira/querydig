@@ -17,7 +17,7 @@ npx querydig            # scan the current directory
 - **Runs locally.** No account, no server, your code never leaves the machine.
 - **Fast.** Tree-sitter (WASM) parsing in a worker pool: about 2,000 files in under 1 second.
 - **Multi-language.** JavaScript, TypeScript, Python, Go, Java, Ruby and PHP.
-- **Multi-database.** MongoDB (Mongoose, native driver, PyMongo/Motor, mongo-go-driver) and SQL (Prisma, TypeORM, Sequelize, pg/mysql2/knex raw, Django ORM, SQLAlchemy, DB-API cursors, GORM/xorm, `database/sql`, Spring Data JPA, Hibernate, JDBC/JdbcTemplate, jOOQ, ActiveRecord, Sequel, Laravel Eloquent/Query Builder, Doctrine, PDO/mysqli). MongoDB also via the Java driver, Spring Data MongoDB, Mongoid and the MongoDB PHP library.
+- **Multi-database.** MongoDB (Mongoose, native driver, PyMongo/Motor, mongo-go-driver) and SQL (Prisma, Drizzle, Kysely, Supabase, TypeORM, Sequelize, pg/mysql2/knex raw, Django ORM, SQLAlchemy, DB-API cursors, GORM/xorm, `database/sql`, Spring Data JPA, Hibernate, JDBC/JdbcTemplate, jOOQ, ActiveRecord, Sequel, Laravel Eloquent/Query Builder, Doctrine, PDO/mysqli). MongoDB also via the Java driver, Spring Data MongoDB, Mongoid and the MongoDB PHP library.
 - **Live evidence (optional).** Point `--uri` at a MongoDB or Postgres replica to confirm full scans, missing and unused indexes, and slow queries.
 - **CI-ready.** [GitHub Action](#github-action) with PR comments, `--fail-on`, baselines, `--diff`, SARIF for GitHub code scanning, HTML report.
 - **In your editor.** [ESLint plugin](#eslint-plugin) for JS/TS, and an [MCP server](#ai-assistants-mcp-server) so AI assistants can fix and verify queries.
@@ -92,7 +92,7 @@ npm i -D querydig
 | MQ009 | low | MongoDB | `$ne` / `$nin` / `$not` filters |
 | MQ010 | low | MongoDB | `find()` without projection |
 | MQ011 | low | MongoDB | Mongoose read without `.lean()` |
-| SQ001 | high | SQL | `findMany()` / `findAll()` / `objects.all()` / `db.Find()` with no where/limit |
+| SQ001 | high | SQL | `findMany()` / `findAll()` / `objects.all()` / `db.Find()` / `db.select().from(t)` / `supabase.from(t).select()` with no where/limit |
 | SQ002 | low | SQL | `SELECT *` |
 | SQ003 | high | SQL | `LIKE '%term'` |
 | SQ004 | high/medium | SQL | `UPDATE`/`DELETE` without `WHERE`, `SELECT` without `WHERE`/`LIMIT` |
@@ -102,6 +102,7 @@ npm i -D querydig
 | SQ008 | medium | SQL | `NOT IN (SELECT …)` |
 | SQ009 | low | SQL | `count()` used only as an existence check (use `exists()` / `exists?` / `existsBy…`) |
 | SQ010 | medium | SQL | Whole table loaded to iterate (`User.all.each`, `foreach (User::all() …)`, `for (… : repo.findAll())`) |
+| SQ011 | medium | SQL | `include` (Prisma) / `with` (Drizzle) nested 3+ levels deep on a list query |
 
 Built-in noise control: `while`/`for {}` polling loops, batching loops (`skip`/`offset` in the loop), loops over collections or model classes, and array helpers like `arr.find(x => …)` or Python `str.find()` are not flagged.
 

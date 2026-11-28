@@ -182,6 +182,15 @@ export const RULES: RuleMeta[] = [
       good: 'User.find_each do |u|\n  notify(u)\nend',
     },
   }),
+  r({
+    id: 'SQ011', name: 'deep-include', title: 'Deeply nested relation loading (include / with)', severity: 'medium', db: 'sql',
+    why: 'Each nested include (Prisma) or with (Drizzle) level loads another relation for every parent row. Three or more levels fan out multiplicatively, pull far more rows and columns than the page needs, and are a common source of slow server actions and API routes.',
+    fix: 'Load only the levels you render, use select to pick columns, and fetch deep or rarely-shown relations in a separate batched query (where: { id: { in: ids } } / inArray).',
+    example: {
+      bad: 'prisma.user.findMany({\n  include: { posts: { include: { comments: { include: { author: true } } } } },\n});',
+      good: 'const users = await prisma.user.findMany({\n  take: 20,\n  select: { id: true, name: true, posts: { select: { id: true, title: true } } },\n});\n// load comments for the visible posts separately, in one query',
+    },
+  }),
   // ---------- live database (--uri) ----------
   r({
     id: 'LV001', name: 'full-scan', title: 'Query does a full collection / table scan', severity: 'high', db: 'any',

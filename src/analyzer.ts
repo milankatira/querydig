@@ -159,7 +159,18 @@ export const SQL_RECEIVER_RE = /(prisma|repository|repo\b|objects|session|entity
 export const SQL_TEXT_RE = /^\s*(select|insert|update|delete|with|replace)\b/i;
 
 const MONGO_FILE_RE = /\b(mongoose|mongodb|pymongo|motor|mongoengine|go\.mongodb\.org|bson)\b/;
-const SQL_FILE_RE = /(@prisma\/client|\bprisma\b|typeorm|sequelize|\bknex\b|['"]pg['"]|mysql|sqlite|sqlalchemy|\bdjango\b|gorm\.io|database\/sql|sqlx|psycopg|drizzle|kysely|pgx)/;
+const SQL_FILE_RE = /(@prisma\/client|\bprisma\b|typeorm|sequelize|\bknex\b|['"]pg['"]|mysql|sqlite|sqlalchemy|\bdjango\b|gorm\.io|database\/sql|sqlx|psycopg|drizzle|kysely|pgx|@supabase\/)/;
+
+/** Receivers that hold a query-builder handle: `db`, `tx`, `this.db`, `ctx.db`… */
+const BUILDER_RECV_RE = /(^|\.)(db|tx|trx|database|drizzle|kysely|qb|conn)$/i;
+/** Query-builder ORMs whose queries are fluent chains (`db.select().from(t).where(…)`). */
+const BUILDER_ORMS = new Set(['drizzle', 'kysely', 'supabase']);
+/** Chain links that neither filter nor bound a builder read. Anything else (where, eq, limit, single…) does. */
+const NON_BOUNDING: Record<string, RegExp> = {
+  drizzle: /^(from|orderBy|leftJoin|rightJoin|innerJoin|fullJoin|crossJoin|execute|then)$/,
+  kysely: /^(select|selectAll|distinct|orderBy|leftJoin|rightJoin|innerJoin|fullJoin|execute)$/,
+  supabase: /^(select|order|returns|throwOnError|then)$/,
+};
 
 const BUILTIN_ROOTS = new Set([
   'Object', 'Array', 'Promise', 'JSON', 'Math', 'Date', 'Reflect', 'Number', 'String', 'Symbol', 'Map', 'Set',
@@ -244,6 +255,9 @@ export class Analyzer {
   hasMongo: boolean;
   hasSql: boolean;
   hasMongoose: boolean;
+  hasDrizzle: boolean;
+  hasKysely: boolean;
+  hasSupabase: boolean;
   isJs: boolean;
 
   readonly plugin: LangPlugin | undefined;
@@ -255,6 +269,9 @@ export class Analyzer {
     this.hasMongo = MONGO_FILE_RE.test(src) || !!hints?.mongo?.test(src);
     this.hasSql = SQL_FILE_RE.test(src) || !!hints?.sql?.test(src);
     this.hasMongoose = /\bmongoose\b/.test(src) || /@nestjs\/mongoose|InjectModel/.test(src);
+    this.hasDrizzle = /drizzle-orm/.test(src);
+    this.hasKysely = /\bkysely\b/i.test(src);
+    this.hasSupabase = /@supabase\//.test(src);
     this.isJs = spec.id === 'javascript' || spec.id === 'typescript' || spec.id === 'tsx';
   }
 
@@ -534,7 +551,8 @@ export class Analyzer {
           : op('readMany', 'sql', 'weak', 'gorm');
       } else def = GO_OPS[method];
     } else {
-      def = Object.prototype.hasOwnProperty.call(JS_OPS, method) ? JS_OPS[method] : undefined;
+      def = this.builderOp(method, receiver, first)
+        ?? (Object.prototype.hasOwnProperty.call(JS_OPS, method) ? JS_OPS[method] : undefined);
       if (def && first && this.spec.lambdas.includes(first.type)) return null; // arr.find(x => ...)
       if (def && (method === 'find' || method === 'findOne') && first && (first.type === 'string' || first.type === 'number')) return null;
     }
@@ -592,11 +610,53 @@ export class Analyzer {
 
     const confidence: Confidence = def.hint === 'none' || sqlArg ? 'high' : hinted ? 'medium' : 'low';
     const argsNode = ci.args;
-    return {
+    const q: QueryCall = {
       node, top, method, kind: def.kind, db, orm: def.orm ?? (this.hasMongoose && db === 'mongodb' && this.isJs ? 'mongoose' : undefined),
       receiver, receiverText: receiverNode.text, collection: this.collectionName(receiverNode), args, argsText: argsNode?.text ?? '',
       chain: [...downChain.reverse(), ...up], confidence,
     };
+    if (this.isJs) this.refineBuilder(q);
+    return q;
+  }
+
+  /** Query-builder entry points: Drizzle `db.select()`, Kysely `db.selectFrom('t')`, Supabase `supabase.from('t')`. */
+  builderOp(method: string, receiver: string, first: TSNode | undefined): OpDef | undefined {
+    const recv = receiver.replace(/^this\./, '');
+    const stringArg = !!first && this.spec.strings.includes(first.type);
+    if (this.hasDrizzle && /^(select|selectDistinct|selectDistinctOn)$/.test(method) && BUILDER_RECV_RE.test(recv)) {
+      return op('readMany', 'sql', 'none', 'drizzle');
+    }
+    if ((this.hasKysely || BUILDER_RECV_RE.test(recv)) && /^(selectFrom|insertInto|replaceInto|updateTable|deleteFrom|mergeInto)$/.test(method) && (this.hasKysely || stringArg)) {
+      return op(method === 'selectFrom' ? 'readMany' : 'write', 'sql', 'none', 'kysely');
+    }
+    if (this.hasSupabase && stringArg && !/storage|channel|realtime/i.test(recv)) {
+      if (method === 'from') return op('readMany', 'sql', 'none', 'supabase');
+      if (method === 'rpc') return op('read', 'sql', 'none', 'supabase');
+    }
+    return undefined;
+  }
+
+  /** Fill in table, ORM and the real operation for builder chains. */
+  refineBuilder(q: QueryCall): void {
+    const recv = q.receiver.replace(/^this\./, '');
+    const firstName = (txt: string) => /^\(?\s*['"`]?([\w.]+)/.exec(txt)?.[1]?.split('.').pop();
+    if (q.orm === 'supabase' && q.method === 'from') {
+      q.collection = firstName(q.argsText);
+      const op1 = q.chain.find((c) => c.node.endIndex > q.node.endIndex)?.name;
+      if (op1 && /^(insert|upsert|update|delete)$/.test(op1)) q.kind = 'write';
+      else if (this.chainHas(q, /^(single|maybeSingle)$/)) q.kind = 'read';
+    } else if (q.orm === 'kysely') {
+      q.collection = firstName(q.argsText);
+      if (q.kind === 'readMany' && this.chainHas(q, /^(executeTakeFirst|executeTakeFirstOrThrow)$/)) q.kind = 'read';
+    } else if (q.orm === 'drizzle') {
+      const from = q.chain.find((c) => c.name === 'from');
+      if (from) q.collection = firstName(from.args);
+    } else if (this.hasDrizzle && BUILDER_RECV_RE.test(recv) && /^(insert|update|delete)$/.test(q.method)) {
+      q.orm = 'drizzle';
+      q.collection = firstName(q.argsText);
+    } else if (this.hasDrizzle && /(^|\.)query\.\w+$/.test(recv) && q.orm === 'prisma') {
+      q.orm = 'drizzle';
+    }
   }
 
   // ------------------------------------------------------------- rules
@@ -635,6 +695,7 @@ export class Analyzer {
 
     if (q.db === 'mongodb') this.mongoRules(q);
     if (q.db === 'sql') this.sqlOrmRules(q);
+    if (q.db === 'sql' && this.isJs) this.builderRules(q);
     if (q.db === 'sql' && q.kind !== 'write' && q.kind !== 'batchWrite') this.sqlExistenceRules(q);
     this.plugin?.extraRules?.(q, ctx, this);
   }
@@ -737,6 +798,9 @@ export class Analyzer {
     if (q.orm === 'django') return 'Use select_related() / prefetch_related() on the outer queryset, or filter(id__in=ids) once.';
     if (q.orm === 'gorm') return 'Use Preload()/Joins() on the outer query or a single Where("id IN ?", ids).Find().';
     if (q.orm === 'prisma') return 'Use include/select relations on the outer query, or findMany({ where: { id: { in: ids } } }).';
+    if (q.orm === 'drizzle') return 'Load the relation with `with: { … }` on the outer db.query call, or run one `db.select().from(t).where(inArray(t.id, ids))` and group the rows in memory.';
+    if (q.orm === 'kysely') return "Run one query with `.where('id', 'in', ids)` (or a join) and group the rows in memory with a Map.";
+    if (q.orm === 'supabase') return "Run one query with `.in('id', ids)`, or embed the relation in the outer select: `.select('*, author:profiles(*)')`.";
     if (q.db === 'sql') return 'Use a JOIN or a single `WHERE id IN (...)`/`= ANY($1)` query and group the rows in memory.';
     return undefined;
   }
@@ -756,6 +820,11 @@ export class Analyzer {
     else if (n.type === 'assignment_expression' || n.type === 'assignment' || n.type === 'augmented_assignment') target = n.childForFieldName('left');
     else if (n.type === 'short_var_declaration' || n.type === 'assignment_statement') target = n.childForFieldName('left');
     if (!target) return;
+    if (this.isJs && (target.type === 'object_pattern' || target.type === 'array_pattern')) {
+      // const { data: rows } = await supabase.from('t').select()  /  const [rows] = await pool.query(...)
+      for (const id of this.identsOf(target)) this.queryVars.add(id);
+      return;
+    }
     const name = /^[A-Za-z_$][\w$]*/.exec(target.text.replace(/^[\s[{(]+/, '').replace(/^(this|self)\./, ''));
     if (name) this.queryVars.add(name[0]);
   }
@@ -1110,6 +1179,7 @@ export class Analyzer {
 
   sqlOrmRules(q: QueryCall): void {
     if (q.kind !== 'readMany') return;
+    if (q.orm && BUILDER_ORMS.has(q.orm) && !(q.orm === 'drizzle' && q.method === 'findMany')) return;
     const hasWhere = this.chainHas(q, /^(where|Where|filter|filter_by|exclude|get|Joins)$/)
       || q.args.some((a) => /\b(where|take|limit|first|cursor)\b/.test(a.text));
     const hasLimit = this.chainHas(q, /^(limit|Limit|take|first|one|one_or_none|scalar|paginate|get)$/)
@@ -1132,6 +1202,68 @@ export class Analyzer {
       message: `\`${q.receiver}.${q.method}()\` has no filter and no limit — loads the whole table.`,
       severity: q.orm === 'django' ? 'medium' : undefined,
     });
+  }
+
+  /** Drizzle / Kysely / Supabase chains and Prisma / Drizzle relation loading. */
+  builderRules(q: QueryCall): void {
+    const orm = q.orm ?? '';
+    const chainText = q.chain.map((c) => `${c.name}${c.args}`).join(' ');
+
+    // deeply nested include / with on list queries (to-one chains on a single row don't fan out)
+    if ((orm === 'prisma' || orm === 'drizzle') && q.kind === 'readMany' && q.args[0]?.type === 'object') {
+      const depth = this.relationDepth(q.args[0]);
+      if (depth >= 3) {
+        const key = orm === 'prisma' ? 'include' : 'with';
+        this.add('SQ011', q.node, q, { message: `\`${q.receiver}.${q.method}()\` nests \`${key}\` ${depth} levels deep: every level is another query or join, and the result fans out multiplicatively.` });
+      }
+    }
+    if (!BUILDER_ORMS.has(orm)) return;
+
+    // leading-wildcard LIKE: ilike(col, `%${q}`), .where('name', 'like', '%x'), .ilike('name', '%x%')
+    const wild = /\b(i?like)\(\s*[^,]+,\s*[`'"]%/.test(chainText + q.argsText)
+      || /['"](i?like)['"]\s*,\s*[`'"]%/.test(chainText)
+      || q.chain.some((c) => /^i?like$/.test(c.name) && /^\(\s*['"`][^'"`]+['"`]\s*,\s*[`'"]%/.test(c.args));
+    if (wild) this.add('SQ003', q.node, q, { message: 'LIKE pattern starts with % — no index can be used.' });
+
+    // offset pagination
+    const off = q.chain.find((c) => c.name === 'offset') ?? (q.orm === 'drizzle' && /\boffset\s*:/.test(q.argsText) ? { name: 'offset', args: '', node: q.node } : undefined);
+    if (off) {
+      const lit = /^\(\s*(\d+)\s*\)$/.exec(off.args);
+      if (!lit || Number(lit[1]) >= 1000) this.add('SQ005', off.node, q, { message: 'OFFSET-based pagination reads and discards all skipped rows.' });
+    }
+
+    // unbounded read
+    if (q.kind !== 'readMany' || q.method === 'findMany') return;
+    const allowed = NON_BOUNDING[orm];
+    const after = q.chain.filter((c) => c.node.endIndex > q.node.endIndex);
+    if (after.some((c) => !allowed.test(c.name))) return;
+    if (orm === 'kysely' && !after.some((c) => c.name === 'execute')) return; // never executed here
+    if (orm !== 'kysely') {
+      let p = q.top.parent;
+      while (p && p.type === 'parenthesized_expression') p = p.parent;
+      if (!p || !['await_expression', 'return_statement'].includes(p.type)) return; // built conditionally / composed later
+    }
+    const selectArgs = orm === 'supabase' ? q.chain.find((c) => c.name === 'select')?.args ?? '' : orm === 'drizzle' ? q.argsText : chainText;
+    if (/\b(count|countDistinct|sum|avg|min|max)\s*\(|fn\.|head\s*:\s*true|groupBy/.test(selectArgs + chainText)) return;
+    this.add('SQ001', q.node, q, {
+      message: `Query on \`${q.collection ?? q.receiver}\` has no filter and no limit — loads the whole table.`,
+      fix: orm === 'supabase' ? 'Add a filter (.eq/.in/…) or bound it with .limit(n) / .range(from, to), using keyset pagination for large tables.'
+        : 'Add a where clause, or bound it with .limit(n) and keyset pagination.',
+    });
+  }
+
+  /** How many `include` / `with` levels an object literal nests (Prisma, Drizzle relational queries). */
+  relationDepth(node: TSNode, guard = 0): number {
+    if (node.type !== 'object' || guard > 10) return 0;
+    let max = 0;
+    for (const p of node.namedChildren) {
+      if (p.type !== 'pair') continue;
+      const v = p.childForFieldName('value');
+      if (!v) continue;
+      const isRel = /^['"]?(include|with)['"]?$/.test(p.childForFieldName('key')?.text ?? '');
+      max = Math.max(max, (isRel ? 1 : 0) + this.relationDepth(v, guard + 1));
+    }
+    return max;
   }
 
   // ------------------------------------------------------------- raw SQL strings

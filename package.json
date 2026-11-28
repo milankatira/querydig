@@ -2,7 +2,7 @@
   "name": "querydig",
   "version": "0.8.0",
   "mcpName": "io.github.milankatira/querydig",
-  "description": "Find slow, N+1 and unoptimized database queries (MongoDB, Postgres, MySQL) in JS/TS, Python, Go, Java, Ruby and PHP code, with optional read-only live evidence from your database. Zero-config CLI for local runs and CI.",
+  "description": "Find slow, N+1 and unoptimized database queries (MongoDB, Postgres, MySQL; Prisma, Drizzle, Kysely, Supabase and 20+ ORMs) in JS/TS, Python, Go, Java, Ruby and PHP code, with optional read-only live evidence from your database. Zero-config CLI for local runs and CI.",
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup && tsc -p tsconfig.build.json && node -e \"require('fs').chmodSync('dist/cli.js',0o755)\"",
@@ -18,6 +18,10 @@
     "postgres",
     "mysql",
     "prisma",
+    "supabase",
+    "kysely",
+    "drizzle-orm",
+    "drizzle",
     "spring-data",
     "hibernate",
     "activerecord",
@@ -50,7 +54,9 @@
     "sarif",
     "eslint",
     "eslint-plugin",
-    "eslintplugin"
+    "eslintplugin",
+    "nextjs",
+    "server-actions"
   ],
   "license": "MIT",
   "type": "module",
